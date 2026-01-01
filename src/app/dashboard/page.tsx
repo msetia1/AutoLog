@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [generateError, setGenerateError] = useState<string>("");
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const [rangeType, setRangeType] = useState<string>("commits-25");
+  const [publishing, setPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string>("");
   const changelogRef = useRef<HTMLDivElement>(null);
 
   // Range options for the dropdown
@@ -71,6 +73,7 @@ export default function Dashboard() {
     setSelectedRepo(repoFullName);
     setCommits([]);
     setChangelog("");
+    setPublishedUrl("");
     setLoadingCommits(true);
 
     const [owner, repo] = repoFullName.split("/");
@@ -96,6 +99,7 @@ export default function Dashboard() {
     setGenerating(true);
     setChangelog("");
     setGenerateError("");
+    setPublishedUrl("");
 
     // Parse range type
     const [type, value] = rangeType.split("-");
@@ -148,6 +152,35 @@ export default function Dashboard() {
       console.error("Failed to generate changelog:", err);
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // Publish changelog
+  async function handlePublish() {
+    if (!selectedRepo || !changelog) return;
+
+    const [owner, repo] = selectedRepo.split("/");
+    setPublishing(true);
+
+    try {
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner, repo, content: changelog }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Publish error:", errorData);
+        return;
+      }
+
+      const data = await res.json();
+      setPublishedUrl(data.url);
+    } catch (err) {
+      console.error("Failed to publish changelog:", err);
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -235,22 +268,31 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-semibold">Generated Changelog</h3>
                   {changelog && !generating && !generateError && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setEditorMode("edit")}
+                          className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
+                            editorMode === "edit" ? "bg-black text-white" : "bg-white"
+                          }`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setEditorMode("preview")}
+                          className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
+                            editorMode === "preview" ? "bg-black text-white" : "bg-white"
+                          }`}
+                        >
+                          Preview
+                        </button>
+                      </div>
                       <button
-                        onClick={() => setEditorMode("edit")}
-                        className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
-                          editorMode === "edit" ? "bg-black text-white" : "bg-white"
-                        }`}
+                        onClick={handlePublish}
+                        disabled={publishing || !!publishedUrl}
+                        className="neo-button bg-black text-white px-4 py-1 rounded-md text-sm disabled:opacity-50"
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setEditorMode("preview")}
-                        className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
-                          editorMode === "preview" ? "bg-black text-white" : "bg-white"
-                        }`}
-                      >
-                        Preview
+                        {publishing ? "Publishing..." : publishedUrl ? "Published" : "Publish"}
                       </button>
                     </div>
                   )}
@@ -280,6 +322,21 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+                {publishedUrl && (
+                  <div className="mt-3 p-3 bg-green-50 border-2 border-green-200 rounded-md">
+                    <p className="text-sm text-green-800">
+                      Published successfully!{" "}
+                      <a
+                        href={publishedUrl}
+                        className="underline font-medium"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View changelog →
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

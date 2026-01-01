@@ -79,6 +79,8 @@ Requirements:
    - BAD: Fixed issues with the Chat Panel, Chat Input, Message List, and Message Bubble, this was achieved by upgrading dependencies, and some slight restructuring
    - GOOD:  Fixed rendering issues with the Chat Panel, Chat Input, Message List, and Message Bubble
 6. Use markdown with ## headers for each feature group and bullet points for changes
+7. NEVER mention specific file names. Always reference things based on the feature.
+8. NEVER mention anything that only the software development team needs to know
 
 Commits:
 ${commitSummaries}
