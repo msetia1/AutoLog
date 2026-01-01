@@ -61,6 +61,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - **changelog_entries:** id, repo_id (FK), date, content (markdown), published, created_at, updated_at
 
 ### Future Features (mention in README)
+- AutoLog text in top left (like logo) with typewriter effect (developer-esque)
 - Export to Markdown/HTML/JSON for teams who want to host on their own domain
 - Custom date range selection
 - AI-generated detailed explanations ("learn more")

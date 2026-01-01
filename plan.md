@@ -2,31 +2,31 @@
 
 ## Build Order
 
-### 1. Project Setup
-- [ ] Initialize Next.js with App Router
-- [ ] Install and configure Tailwind CSS
-- [ ] Install and configure shadcn/ui
-- [ ] Set up environment variables structure
+### 1. Project Setup ✅
+- [x] Initialize Next.js with App Router
+- [x] Install and configure Tailwind CSS
+- [x] Install and configure shadcn/ui
+- [x] Add neo-button styles
+- [x] Set up environment variables structure
 
-### 2. Supabase + Schema
-- [ ] Create Supabase project
-- [ ] Set up database tables (users, repos, changelog_entries)
-- [ ] Configure Supabase client in Next.js
+### 2. Supabase + Schema ✅
+- [x] Create Supabase project
+- [x] Set up database tables (user, session, account, verification via Better Auth + repos, changelog_entries)
+- [x] Configure Supabase client in Next.js (`src/lib/supabase/server.ts`)
 
-### 3. Better Auth + GitHub OAuth
-- [ ] Install Better Auth
-- [ ] Create GitHub OAuth app
-- [ ] Configure auth with GitHub provider
-- [ ] Set up auth API routes
-- [ ] Create sign in/out UI
+### 3. Better Auth + GitHub OAuth ✅
+- [x] Install Better Auth
+- [x] Create GitHub OAuth app
+- [x] Configure auth with GitHub provider (`src/lib/auth.ts`)
+- [x] Set up auth API routes (`src/app/api/auth/[...all]/route.ts`)
+- [x] Create sign in/out UI (home page)
 
-### 4. GitHub Integration
-- [ ] Fetch user's repos from GitHub API
-- [ ] Fetch commits for a repo (with pagination)
-- [ ] Fetch diffs for commits
+### 4. GitHub Integration ✅
+- [x] Fetch user's repos from GitHub API (`fetchUserRepos`)
+- [x] Fetch commits for a repo with diffs (`fetchCommitsWithDiffs`)
 - [ ] Store connected repo in database
 
-### 5. OpenRouter + Streaming
+### 5. OpenRouter + Streaming ⬅️ CURRENT
 - [ ] Set up OpenRouter client
 - [ ] Create prompt for changelog summarization
 - [ ] Implement streaming API route
