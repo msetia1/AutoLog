@@ -1,67 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AutoLog
 
-## Getting Started
+AI-powered changelog generator that turns GitHub commits into user-friendly changelogs.
 
-First, run the development server:
+## Running the App
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+NEXT_PUBLIC_SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+DATABASE_URL=
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+OPENROUTER_API_KEY=
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Decisions Log
+## Technical Decisions
 
 ### Stack
-- **Framework:** Next.js (App Router) — one codebase for frontend + API, simple Vercel deployment
-- **Auth:** Better Auth with GitHub OAuth — TypeScript-first, simpler than NextAuth, aligns with Greptile auth (thanks for posting about it Soohoon). Also gives us GitHub access token for repo access.
-- **Database:** Supabase (Postgres) — need to persist users, connected repos, changelog entries. Free tier, works well with Vercel.
-- **AI:** OpenRouter — allows easy model switching to find best summarization quality
+- **Next.js (App Router)** — Single codebase for frontend + API, simple Vercel deployment
+- **Better Auth** — TypeScript-first auth library with GitHub OAuth. Simpler than NextAuth, gives us the GitHub access token needed for repo access.
+- **Supabase (Postgres)** — Persists users, repos, and changelog entries
+- **OpenRouter** — LLM gateway that allows model switching without code changes
 
 ### Product Decisions
-- **Full GitHub OAuth flow** (not env vars or paste-URL): Greptile evaluators should experience it as a real product. OAuth also gives us the token we need to access their repos without asking them to generate a PAT.
-- **Multi-tenant:** Any user can sign in and connect their repos
-- **Streaming LLM responses:** Vercel hobby has 10s timeout. LLM calls can exceed that. Streaming keeps connection alive + better UX (text appears as it generates).
-- **Simple date range:** "Since last changelog" only (or all commits if first time). No date picker for MVP — can add later if time permits.
-- **AI input: full diffs** — Use large-context models (Gemini Flash, GPT-4o-mini) so we can send full commit diffs. Better input = better summaries. No "learn more" button for MVP — just well-written bullet points grouped by category (Features/Fixes/Improvements).
-  - **NOTE:** Needs extensive testing to verify full diffs work well at scale (large repos, many commits).
-- **Public page structure:** Dates only (no version numbers). `/changelog` shows all entries newest-first. `/changelog/{date}` shows individual entry.
-- **URL structure:** Path-based multi-tenancy. `/{owner}/{repo}/changelog` for public pages. `/dashboard` for dev-facing tool. Keep them separate, no conditional UI.
-- **Edit flow:** Textarea with live markdown preview. Dev can edit AI output before publishing.
-- **Styling:** Tailwind + shadcn/ui. Clean, minimal aesthetic. Accessible components out of the box.
+- **Full GitHub OAuth** — Evaluators should experience it as a real product. OAuth also provides the token we need to access repos without asking users to generate a PAT.
+- **Multi-tenant** — Any user can sign in and connect their repos
+- **Streaming LLM responses** — Vercel hobby tier has a 10s function timeout. LLM calls can exceed that. Streaming keeps the connection alive and provides better UX.
+- **Public page structure** — Dates only (no version numbers). `/{owner}/{repo}/changelog` for public pages, `/dashboard` for the dev-facing tool.
+- **Edit flow** — Textarea with markdown preview. Developer can edit AI output before publishing.
+- **Styling** — Tailwind + shadcn/ui. Clean, minimal aesthetic.
 
-### Database Schema (Supabase/Postgres)
-- **users:** id, github_id, email, name, avatar_url, access_token, created_at
-- **repos:** id, user_id (FK), owner, name, last_changelog_commit_sha, created_at
-- **changelog_entries:** id, repo_id (FK), date, content (markdown), published, created_at, updated_at
+---
 
-### Future Features (mention in README)
-- AutoLog text in top left (like logo) with typewriter effect (developer-esque)
-- Export to Markdown/HTML/JSON for teams who want to host on their own domain
-- Custom date range selection
-- AI-generated detailed explanations ("learn more")
+## Changelog Generation: Design Decisions
+
+### Handling Large Repositories
+
+**Problem:** Users connecting repos with many commits would exceed LLM context limits (hit 478K tokens on a 48-commit repo with full diffs).
+
+**Solution:** Layered approach:
+1. **Range selector** — Users choose "Last 7/30/90 days" or "Last 25/50 commits"
+2. **Commit cap** — Hard limit of 50 commits regardless of selection
+3. **Diff truncation** — Each file's patch capped at 500 characters
+
+**Why both time and commit options?** Time-based works for active repos ("what changed this week"), but fails for dormant repos. Commit-based works universally.
+
+### Handling Bad Commit Messages
+
+**Problem:** Many repos have vague commits ("fix", "update", "wip"). The LLM can't generate useful changelogs from these alone.
+
+**Solution:**
+- Always include file paths with +/- line counts (shows scope even without good messages)
+- Prompt instructs LLM to infer features from file paths and diffs
+- Truncated diffs (500 chars) still capture the "shape" of changes
+
+### Output Quality vs Input Size
+
+**Observation:** 50 commits produced generic summaries ("Added calendar features"), while 25 commits produced specific details ("Added a revert button to undo AI-suggested changes").
+
+**Why:** LLMs compress when given more input. Less input = more room for detail.
+
+**Solution:** Prompt engineering with explicit BAD/GOOD examples to anchor expected specificity.
+
+### Changelog Grouping Strategy
+
+**Rejected:** Group by type (Features, Improvements, Bug Fixes)
+- Requires understanding commit *intent* — impossible with vague messages
+
+**Chosen:** Group by product feature (e.g., "Calendar improvements", "Search functionality")
+- Can be inferred from file paths even with bad commit messages
+- More useful for end-users reading the changelog
+
+### File Filtering
+
+**Excluded from context:** node_modules, lock files, markdown files, build artifacts, .env files
+
+**Why:** These add tokens without useful changelog information.
+
+---
+
+## AI Tools Used
+
+- **Claude Code** — Development assistance
+- **OpenRouter (Gemini 2.0 Flash Lite)** — Changelog generation

@@ -1,6 +1,7 @@
 import type { Commit } from "./github";
 
 const OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions";
+const MAX_PATCH_LENGTH = 500; // Truncate diffs to keep prompt size manageable
 
 // Files/directories to exclude from changelog context
 const EXCLUDED_PATTERNS = [
@@ -43,7 +44,13 @@ function buildPrompt(commits: Commit[]): string {
 
     const patches = files
       .filter((f) => f.patch)
-      .map((f) => `### ${f.filename}\n\`\`\`diff\n${f.patch}\n\`\`\``)
+      .map((f) => {
+        const truncated = f.patch!.length > MAX_PATCH_LENGTH;
+        const patch = truncated
+          ? f.patch!.slice(0, MAX_PATCH_LENGTH) + "\n... (truncated)"
+          : f.patch;
+        return `### ${f.filename}\n\`\`\`diff\n${patch}\n\`\`\``;
+      })
       .join("\n\n");
 
     return `## Commit: ${commit.commit.message.split("\n")[0]}
@@ -57,20 +64,26 @@ ${fileChanges || "  (no relevant files)"}
 ${patches ? `Diffs:\n${patches}` : ""}`;
   }).join("\n\n---\n\n");
 
-  return `You are a changelog writer for a software project. Based on the following commits and their diffs, write a user-friendly changelog entry.
+  return `You are a changelog writer. Write a detailed, user-friendly changelog from the commits below.
 
-Guidelines:
-- Write for end-users, not developers
-- Group changes into categories: Features, Improvements, Bug Fixes
-- Use clear, concise bullet points
-- Focus on what changed from the user's perspective, not technical implementation details
-- Skip internal refactoring or code cleanup unless it affects users
-- If there are no meaningful user-facing changes, say so
+Requirements:
+1. Group by product feature (e.g., "Calendar improvements", "Search functionality"), NOT by type (features/bugs) or technical area (API/database)
+2. Be SPECIFIC about what changed. Describe the actual change, not vague summaries.
+   - BAD: "Added calendar features"
+   - GOOD: "Added a revert button to undo AI-suggested changes"
+   - BAD: "Improved performance"
+   - GOOD: "Reduced load time for large documents"
+3. Infer the product feature from file paths and diffs when commit messages are vague
+4. Write for end-users, not developers. Skip purely internal changes.
+5. DO NOT include information regarding implementation details.
+   - BAD: Fixed issues with the Chat Panel, Chat Input, Message List, and Message Bubble, this was achieved by upgrading dependencies, and some slight restructuring
+   - GOOD:  Fixed rendering issues with the Chat Panel, Chat Input, Message List, and Message Bubble
+6. Use markdown with ## headers for each feature group and bullet points for changes
 
 Commits:
 ${commitSummaries}
 
-Write the changelog entry in markdown format:`;
+Changelog:`;
 }
 
 export async function generateChangelog(

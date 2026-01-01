@@ -4,8 +4,10 @@ import { createServerClient } from "@/lib/supabase/server";
 import { fetchCommitsWithDiffs } from "@/lib/github";
 import { generateChangelog } from "@/lib/openrouter";
 
+const MAX_COMMITS = 50; // Safety cap
+
 export async function POST(request: Request) {
-  const { owner, repo, since } = await request.json();
+  const { owner, repo, since, limit } = await request.json();
 
   if (!owner || !repo) {
     return Response.json({ error: "Missing owner or repo" }, { status: 400 });
@@ -36,16 +38,24 @@ export async function POST(request: Request) {
 
   try {
     // Fetch commits with diffs
-    console.log("Fetching commits for", owner, repo);
-    const commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, since);
-    console.log("Fetched", commits.length, "commits");
+    console.log("Fetching commits for", owner, repo, "since:", since, "limit:", limit);
+    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, since);
+    console.log("Fetched", commits.length, "commits from GitHub");
 
     if (commits.length === 0) {
-      return Response.json({ error: "No commits found" }, { status: 400 });
+      return Response.json({ error: "No commits found in this range" }, { status: 400 });
+    }
+
+    // Apply limit (user-selected or safety cap)
+    const effectiveLimit = Math.min(limit || MAX_COMMITS, MAX_COMMITS);
+    const totalCommits = commits.length;
+    if (commits.length > effectiveLimit) {
+      commits = commits.slice(0, effectiveLimit);
+      console.log(`Capped to ${effectiveLimit} commits (from ${totalCommits})`);
     }
 
     // Generate changelog with streaming
-    console.log("Calling OpenRouter...");
+    console.log("Calling OpenRouter with", commits.length, "commits...");
     const stream = await generateChangelog(commits);
     console.log("Got stream from OpenRouter");
 

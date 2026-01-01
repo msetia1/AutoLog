@@ -24,8 +24,19 @@ export default function Dashboard() {
   const [loadingCommits, setLoadingCommits] = useState(false);
   const [changelog, setChangelog] = useState<string>("");
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string>("");
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [rangeType, setRangeType] = useState<string>("commits-25");
   const changelogRef = useRef<HTMLDivElement>(null);
+
+  // Range options for the dropdown
+  const rangeOptions = [
+    { value: "days-7", label: "Last 7 days" },
+    { value: "days-30", label: "Last 30 days" },
+    { value: "days-90", label: "Last 90 days" },
+    { value: "commits-25", label: "Last 25 commits" },
+    { value: "commits-50", label: "Last 50 commits" },
+  ];
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -84,16 +95,36 @@ export default function Dashboard() {
     const [owner, repo] = selectedRepo.split("/");
     setGenerating(true);
     setChangelog("");
+    setGenerateError("");
+
+    // Parse range type
+    const [type, value] = rangeType.split("-");
+    const params: { owner: string; repo: string; since?: string; limit?: number } = { owner, repo };
+
+    if (type === "days") {
+      const date = new Date();
+      date.setDate(date.getDate() - parseInt(value));
+      params.since = date.toISOString();
+    } else {
+      params.limit = parseInt(value);
+    }
 
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner, repo }),
+        body: JSON.stringify(params),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to generate changelog");
+        const errorData = await res.json();
+        if (errorData.error?.includes("No commits")) {
+          setGenerateError("No commits found in this range. Try a wider date range or select by commit count.");
+        } else {
+          setGenerateError(errorData.error || "Failed to generate changelog");
+        }
+        setGenerating(false);
+        return;
       }
 
       const reader = res.body?.getReader();
@@ -170,13 +201,27 @@ export default function Dashboard() {
                 Commits {loadingCommits && "(loading...)"}
               </h2>
               {commits.length > 0 && (
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="neo-button bg-white px-4 py-2 rounded-md text-sm disabled:opacity-50"
-                >
-                  {generating ? "Generating..." : "Generate Changelog"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <Select value={rangeType} onValueChange={setRangeType}>
+                    <SelectTrigger className="w-40 neo-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rangeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="neo-button bg-white px-4 py-2 rounded-md text-sm disabled:opacity-50"
+                  >
+                    {generating ? "Generating..." : "Generate Changelog"}
+                  </button>
+                </div>
               )}
             </div>
 
@@ -185,11 +230,11 @@ export default function Dashboard() {
             )}
 
             {/* Generated changelog */}
-            {(changelog || generating) && (
+            {(changelog || generating || generateError) && (
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-semibold">Generated Changelog</h3>
-                  {changelog && !generating && (
+                  {changelog && !generating && !generateError && (
                     <div className="flex gap-1">
                       <button
                         onClick={() => setEditorMode("edit")}
@@ -214,7 +259,11 @@ export default function Dashboard() {
                   ref={changelogRef}
                   className="neo-card bg-white rounded-md overflow-hidden"
                 >
-                  {generating ? (
+                  {generateError ? (
+                    <div className="p-4 text-sm text-muted-foreground">
+                      {generateError}
+                    </div>
+                  ) : generating ? (
                     <pre className="whitespace-pre-wrap font-sans text-sm p-4 max-h-96 overflow-y-auto">
                       {changelog || "Generating..."}
                     </pre>
