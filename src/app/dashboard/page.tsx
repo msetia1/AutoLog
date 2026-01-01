@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ReactMarkdown from "react-markdown";
 import type { Repo, Commit } from "@/lib/github";
 
 export default function Dashboard() {
@@ -21,6 +22,10 @@ export default function Dashboard() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(true);
   const [loadingCommits, setLoadingCommits] = useState(false);
+  const [changelog, setChangelog] = useState<string>("");
+  const [generating, setGenerating] = useState(false);
+  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const changelogRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -54,6 +59,7 @@ export default function Dashboard() {
   async function handleRepoSelect(repoFullName: string) {
     setSelectedRepo(repoFullName);
     setCommits([]);
+    setChangelog("");
     setLoadingCommits(true);
 
     const [owner, repo] = repoFullName.split("/");
@@ -68,6 +74,49 @@ export default function Dashboard() {
       console.error("Failed to fetch commits:", err);
     } finally {
       setLoadingCommits(false);
+    }
+  }
+
+  // Generate changelog with streaming
+  async function handleGenerate() {
+    if (!selectedRepo || commits.length === 0) return;
+
+    const [owner, repo] = selectedRepo.split("/");
+    setGenerating(true);
+    setChangelog("");
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner, repo }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate changelog");
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) throw new Error("No response body");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        setChangelog((prev) => prev + chunk);
+
+        // Auto-scroll to bottom
+        if (changelogRef.current) {
+          changelogRef.current.scrollTop = changelogRef.current.scrollHeight;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate changelog:", err);
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -116,12 +165,73 @@ export default function Dashboard() {
         {/* Commits display */}
         {selectedRepo && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">
-              Commits {loadingCommits && "(loading...)"}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                Commits {loadingCommits && "(loading...)"}
+              </h2>
+              {commits.length > 0 && (
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="neo-button bg-white px-4 py-2 rounded-md text-sm disabled:opacity-50"
+                >
+                  {generating ? "Generating..." : "Generate Changelog"}
+                </button>
+              )}
+            </div>
 
             {commits.length === 0 && !loadingCommits && (
               <p className="text-muted-foreground">No commits found.</p>
+            )}
+
+            {/* Generated changelog */}
+            {(changelog || generating) && (
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-semibold">Generated Changelog</h3>
+                  {changelog && !generating && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setEditorMode("edit")}
+                        className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
+                          editorMode === "edit" ? "bg-black text-white" : "bg-white"
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setEditorMode("preview")}
+                        className={`px-3 py-1 text-sm rounded-md border-2 border-black ${
+                          editorMode === "preview" ? "bg-black text-white" : "bg-white"
+                        }`}
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div
+                  ref={changelogRef}
+                  className="neo-card bg-white rounded-md overflow-hidden"
+                >
+                  {generating ? (
+                    <pre className="whitespace-pre-wrap font-sans text-sm p-4 max-h-96 overflow-y-auto">
+                      {changelog || "Generating..."}
+                    </pre>
+                  ) : editorMode === "edit" ? (
+                    <textarea
+                      value={changelog}
+                      onChange={(e) => setChangelog(e.target.value)}
+                      className="w-full h-96 p-4 text-sm font-mono resize-none focus:outline-none"
+                      placeholder="Your changelog will appear here..."
+                    />
+                  ) : (
+                    <div className="prose prose-sm max-w-none p-4 max-h-96 overflow-y-auto">
+                      <ReactMarkdown>{changelog}</ReactMarkdown>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             <div className="space-y-4">
