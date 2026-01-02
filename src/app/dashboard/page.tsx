@@ -339,7 +339,7 @@ export default function Dashboard() {
       <div className="relative z-10 max-w-[1100px] mx-auto px-6 min-h-screen flex flex-col">
         {/* Header */}
         <header className="flex justify-between items-center py-6">
-          <div className="text-xl text-white flex items-center" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
+          <div className="text-xl text-[#4AF262] flex items-center" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
             {"autolog".split("").map((char, index) => (
               <motion.span
                 key={index}
@@ -354,93 +354,93 @@ export default function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 1, 0] }}
               transition={{ duration: 0.8, repeat: 3, delay: 0.7 }}
-              className="ml-0.5 text-green-500"
+              className="ml-0.5 text-[#4AF262]"
             >
               _
             </motion.span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-neutral-500">{session.user.email || session.user.name}</span>
+          <div className="flex items-center gap-4" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
+            <span className="text-sm text-neutral-500">{session.user.name}</span>
             <button
               onClick={() => signOut()}
-              className="text-sm text-neutral-500 hover:text-white transition-colors"
+              className="px-3 py-1.5 text-sm bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-lg hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 transition-all"
             >
               Sign out
             </button>
           </div>
         </header>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 flex-1 items-start content-center py-12">
-          {/* Main Column */}
-          <div className="space-y-6">
+        {/* Main Content */}
+        <div className="flex flex-col gap-6 flex-1 justify-center py-12">
+          {/* Top Row - Generate Card + Recent Changelogs */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-stretch">
             {/* Main Card */}
             <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
               {/* Title */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Generate Changelog</h1>
-            <p className="text-neutral-500">Select a repository and let AI summarize your recent commits</p>
-          </div>
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Generate Changelog</h1>
+                <p className="text-neutral-500">Select a repository and let AI summarize your recent commits</p>
+              </div>
 
-          {/* Repository Select */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
-              Repository
-            </label>
-            <Dropdown
-              options={repos.map((repo) => ({
-                id: repo.id,
-                label: repo.full_name,
-              }))}
-              value={selectedRepo}
-              onChange={handleRepoSelect}
-              placeholder={loadingRepos ? "Loading repos..." : "Choose a repository"}
-              disabled={loadingRepos}
-            />
-          </div>
+              {/* Repository Select */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+                  Repository
+                </label>
+                <Dropdown
+                  options={repos.map((repo) => ({
+                    id: repo.id,
+                    label: repo.full_name,
+                  }))}
+                  value={selectedRepo}
+                  onChange={handleRepoSelect}
+                  placeholder={loadingRepos ? "Loading repos..." : "Choose a repository"}
+                  disabled={loadingRepos}
+                />
+              </div>
 
-          {/* Time Range */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
-              Time Range
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {rangeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setRangeType(option.value)}
+              {/* Time Range */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+                  Time Range
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {rangeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setRangeType(option.value)}
+                      disabled={generationPhase !== "idle"}
+                      className={`px-4 py-2 text-sm rounded-lg border transition-all ${
+                        rangeType === option.value
+                          ? "bg-[#4AF262]/15 border-[#4AF262]/50 text-[#4AF262] font-medium"
+                          : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Context */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+                  Additional Context <span className="text-neutral-600 normal-case">(optional)</span>
+                </label>
+                <textarea
+                  value={additionalContext}
+                  onChange={(e) => setAdditionalContext(e.target.value)}
+                  placeholder="Add context to guide the AI... e.g., 'Focus on user-facing features. Audience is non-technical.'"
+                  className="w-full min-h-[80px] px-4 py-3 text-sm bg-[#0a0a0a] border border-neutral-800 rounded-xl text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-700 resize-none transition-colors"
                   disabled={generationPhase !== "idle"}
-                  className={`px-4 py-2 text-sm rounded-lg border transition-all ${
-                    rangeType === option.value
-                      ? "bg-green-500/15 border-green-500/50 text-green-400 font-medium"
-                      : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Context */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
-              Context <span className="text-neutral-600 normal-case">(optional)</span>
-            </label>
-            <textarea
-              value={additionalContext}
-              onChange={(e) => setAdditionalContext(e.target.value)}
-              placeholder="Add context to guide the AI... e.g., 'Focus on user-facing features. Audience is non-technical.'"
-              className="w-full min-h-[80px] px-4 py-3 text-sm bg-[#0a0a0a] border border-neutral-800 rounded-xl text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-700 resize-none transition-colors"
-              disabled={generationPhase !== "idle"}
-            />
-          </div>
+                />
+              </div>
 
               {/* Generate Button */}
               <button
                 onClick={handleGenerate}
                 disabled={!selectedRepo || commits.length === 0 || generationPhase !== "idle"}
-                className="w-full py-4 text-sm font-semibold bg-green-500 text-black rounded-xl hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 text-sm font-semibold bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-xl hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -453,136 +453,137 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Analyzing State */}
-            {generationPhase === "analyzing" && (
-              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin w-5 h-5 border-2 border-neutral-700 border-t-green-500 rounded-full" />
-                  <span className="text-neutral-400">Analyzing commits...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Clarifying Questions */}
-            {generationPhase === "questions" && questions.length > 0 && (
-              <ClarifyingQuestions
-                questions={questions}
-                onComplete={handleQuestionsComplete}
-                onSkip={handleSkipQuestions}
-              />
-            )}
-
-            {/* Generated Changelog */}
-            {(changelog || generationPhase === "generating" || generateError) && (
-              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-white">Result</h2>
-                  {changelog && generationPhase === "idle" && !generateError && (
-                    <div className="flex gap-3 items-center">
-                      <div className="flex gap-1 bg-neutral-900 p-1 rounded-lg">
-                        <button
-                          onClick={() => setEditorMode("edit")}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            editorMode === "edit"
-                              ? "bg-neutral-700 text-white"
-                              : "text-neutral-400 hover:text-white"
-                          }`}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setEditorMode("preview")}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            editorMode === "preview"
-                              ? "bg-neutral-700 text-white"
-                              : "text-neutral-400 hover:text-white"
-                          }`}
-                        >
-                          Preview
-                        </button>
-                      </div>
-                      <button
-                        onClick={handlePublish}
-                        disabled={publishing || !!publishedUrl}
-                        className="px-4 py-1.5 text-xs font-medium bg-green-500 text-black rounded-lg hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {publishing ? "Publishing..." : publishedUrl ? "Published" : "Publish"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div
-                  ref={changelogRef}
-                  className="bg-[#0a0a0a] border border-neutral-800 rounded-xl overflow-hidden"
-                >
-                  {generateError ? (
-                    <div className="p-4 text-sm text-neutral-500">
-                      {generateError}
-                    </div>
-                  ) : generationPhase === "generating" ? (
-                    <pre className="whitespace-pre-wrap font-sans text-sm p-4 max-h-96 overflow-y-auto text-neutral-300">
-                      {changelog || "Generating..."}
-                    </pre>
-                  ) : editorMode === "edit" ? (
-                    <textarea
-                      value={changelog}
-                      onChange={(e) => setChangelog(e.target.value)}
-                      className="w-full h-96 p-4 text-sm font-mono resize-none focus:outline-none bg-transparent text-neutral-200"
-                      placeholder="Your changelog will appear here..."
-                    />
-                  ) : (
-                    <div className="prose prose-sm prose-invert max-w-none p-4 max-h-96 overflow-y-auto">
-                      <ReactMarkdown>{changelog}</ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-                {publishedUrl && (
-                  <div className="mt-4 p-3 bg-green-950/50 border border-green-800/50 rounded-lg">
-                    <p className="text-sm text-green-400">
-                      Published successfully!{" "}
+            {/* Sidebar - Recent Changelogs */}
+            <aside className="flex">
+              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 flex-1">
+                <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Recent Changelogs</h2>
+                {recentEntries.length === 0 ? (
+                  <p className="text-sm text-neutral-600">No changelogs yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentEntries.map((entry) => (
                       <a
-                        href={publishedUrl}
-                        className="underline hover:text-green-300"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        key={entry.id}
+                        href={`/${entry.owner}/${entry.repoName}/changelog`}
+                        className="block p-2 -mx-2 rounded-lg hover:bg-neutral-800/50 transition-colors group"
                       >
-                        View changelog
+                        <div className="text-sm text-neutral-300 group-hover:text-white transition-colors line-clamp-2 mb-1">
+                          {getPreviewText(entry.content)}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-neutral-600">
+                          <span className="font-mono">{formatRelativeTime(entry.created_at)}</span>
+                          <span>·</span>
+                          <span className="truncate">{entry.repo}</span>
+                        </div>
                       </a>
-                    </p>
+                    ))}
                   </div>
                 )}
               </div>
-            )}
+            </aside>
           </div>
 
-          {/* Sidebar - Recent Changelogs */}
-          <aside className="self-stretch">
-            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 h-full">
-              <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Recent Changelogs</h2>
-              {recentEntries.length === 0 ? (
-                <p className="text-sm text-neutral-600">No changelogs yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentEntries.map((entry) => (
-                    <a
-                      key={entry.id}
-                      href={`/${entry.owner}/${entry.repoName}/changelog`}
-                      className="block p-2 -mx-2 rounded-lg hover:bg-neutral-800/50 transition-colors group"
+          {/* Bottom Row - Full Width Results/Questions */}
+          {/* Analyzing State */}
+          {generationPhase === "analyzing" && (
+            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin w-5 h-5 border-2 border-neutral-700 border-t-[#4AF262] rounded-full" />
+                <span className="text-neutral-400">Analyzing commits...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Clarifying Questions */}
+          {generationPhase === "questions" && questions.length > 0 && (
+            <ClarifyingQuestions
+              questions={questions}
+              onComplete={handleQuestionsComplete}
+              onSkip={handleSkipQuestions}
+            />
+          )}
+
+          {/* Generated Changelog */}
+          {(changelog || generationPhase === "generating" || generateError) && (
+            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-white">Result</h2>
+                {changelog && generationPhase === "idle" && !generateError && (
+                  <div className="flex gap-3 items-center">
+                    <div className="flex gap-1 bg-neutral-900 p-1 rounded-lg">
+                      <button
+                        onClick={() => setEditorMode("edit")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          editorMode === "edit"
+                            ? "bg-neutral-700 text-white"
+                            : "text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setEditorMode("preview")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          editorMode === "preview"
+                            ? "bg-neutral-700 text-white"
+                            : "text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        Preview
+                      </button>
+                    </div>
+                    <button
+                      onClick={handlePublish}
+                      disabled={publishing || !!publishedUrl}
+                      className="px-4 py-1.5 text-xs font-medium bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-lg hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      <div className="text-sm text-neutral-300 group-hover:text-white transition-colors line-clamp-2 mb-1">
-                        {getPreviewText(entry.content)}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-neutral-600">
-                        <span className="font-mono">{formatRelativeTime(entry.created_at)}</span>
-                        <span>·</span>
-                        <span className="truncate">{entry.repo}</span>
-                      </div>
+                      {publishing ? "Publishing..." : publishedUrl ? "Published" : "Publish"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div
+                ref={changelogRef}
+                className="bg-[#0a0a0a] border border-neutral-800 rounded-xl overflow-hidden"
+              >
+                {generateError ? (
+                  <div className="p-4 text-sm text-neutral-500">
+                    {generateError}
+                  </div>
+                ) : generationPhase === "generating" ? (
+                  <pre className="whitespace-pre-wrap font-sans text-sm p-4 max-h-96 overflow-y-auto text-neutral-300">
+                    {changelog || "Generating..."}
+                  </pre>
+                ) : editorMode === "edit" ? (
+                  <textarea
+                    value={changelog}
+                    onChange={(e) => setChangelog(e.target.value)}
+                    className="w-full h-96 p-4 text-sm font-mono resize-none focus:outline-none bg-transparent text-neutral-200"
+                    placeholder="Your changelog will appear here..."
+                  />
+                ) : (
+                  <div className="prose prose-sm prose-invert max-w-none p-4 max-h-96 overflow-y-auto">
+                    <ReactMarkdown>{changelog}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
+              {publishedUrl && (
+                <div className="mt-4 p-3 bg-[#4AF262]/10 border border-[#4AF262]/30 rounded-lg">
+                  <p className="text-sm text-[#4AF262]">
+                    Published successfully!{" "}
+                    <a
+                      href={publishedUrl}
+                      className="underline hover:text-[#3DD855]"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View changelog
                     </a>
-                  ))}
+                  </p>
                 </div>
               )}
             </div>
-          </aside>
+          )}
         </div>
       </div>
     </div>

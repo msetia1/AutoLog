@@ -59,7 +59,7 @@ export function Dropdown({
           disabled
             ? "opacity-50 cursor-not-allowed border-neutral-800 text-neutral-500"
             : "border-neutral-800 text-white hover:border-neutral-600"
-        } bg-transparent flex items-center justify-between font-mono text-sm`}
+        } bg-transparent flex items-center justify-between text-sm`}
       >
         <span className={selectedOption ? "text-white" : "text-neutral-500"}>
           {selectedOption?.label || placeholder}
@@ -96,7 +96,7 @@ export function Dropdown({
                   }`}
                 >
                   <div>
-                    <div className="font-mono text-sm">{option.label}</div>
+                    <div className="text-sm">{option.label}</div>
                     {option.description && (
                       <div className="text-xs text-neutral-500 group-hover:text-neutral-600 mt-0.5">
                         {option.description}
