@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - Clean Aesthetic</title>
+  <style>
+    :root {
+      --bg: #111111;
+      --bg-card: #191919;
+      --bg-elevated: #222222;
+      --text-primary: #FAFAFA;
+      --text-secondary: #A1A1A1;
+      --text-muted: #666666;
+      --border: #2A2A2A;
+      --accent: #3B82F6;
+      --timeline-line: #2A2A2A;
+      --timeline-dot: #444444;
+      --timeline-dot-active: #3B82F6;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "CursorGothic", "CursorGothic Fallback", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 80px 40px;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 64px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    /* Timeline Layout */
+    .changelog {
+      position: relative;
+    }
+
+    /* Sticky Date Sidebar */
+    .date-indicator {
+      position: fixed;
+      left: max(24px, calc((100vw - 880px) / 2 - 140px));
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: right;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .date-indicator.visible {
+      opacity: 1;
+    }
+
+    .date-indicator .month {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .date-indicator .day {
+      font-size: 44px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .date-indicator .year {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Timeline Container */
+    .timeline-wrapper {
+      position: relative;
+      padding-left: 32px;
+    }
+
+    /* Timeline line background */
+    .timeline-line {
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent 0%, var(--timeline-line) 10%, var(--timeline-line) 90%, transparent 100%);
+    }
+
+    /* Animated progress line */
+    .timeline-progress {
+      position: absolute;
+      left: 8px;
+      top: 0;
+      width: 2px;
+      height: 0;
+      background: linear-gradient(to bottom, transparent, var(--accent) 20%, var(--accent));
+      border-radius: 2px;
+      transition: height 0.1s ease-out;
+    }
+
+    /* Entries */
+    .entry {
+      position: relative;
+      padding-bottom: 48px;
+    }
+
+    .entry:last-child {
+      padding-bottom: 0;
+    }
+
+    .entry::before {
+      content: '';
+      position: absolute;
+      left: -28px;
+      top: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid var(--timeline-dot);
+      transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+      z-index: 2;
+    }
+
+    .entry.active::before {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+
+    .entry-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .entry-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 28px;
+      border: 1px solid var(--border);
+    }
+
+    .entry-card h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .entry-card h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 20px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .entry-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .entry-card li {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .entry-card li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .entry-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    /* Tag */
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tag.feature {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60A5FA;
+    }
+
+    .tag.improvement {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ADE80;
+    }
+
+    .tag.fix {
+      background: rgba(239, 68, 68, 0.15);
+      color: #F87171;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: var(--text-primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .date-indicator {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="date-indicator" id="dateIndicator">
+    <div class="month">Dec</div>
+    <div class="day">28</div>
+    <div class="year">2024</div>
+  </div>
+
+  <div class="container">
+    <header class="header">
+      <h1>Changelog</h1>
+      <p>New updates and improvements to DevFlow</p>
+    </header>
+
+    <div class="changelog">
+      <div class="timeline-wrapper">
+        <div class="timeline-line"></div>
+        <div class="timeline-progress" id="timelineProgress"></div>
+
+        <article class="entry active" data-date="Dec 28, 2024">
+          <div class="entry-date">December 28, 2024</div>
+          <div class="entry-card">
+            <span class="tag feature">New Feature</span>
+            <h2>AI-Powered Code Review</h2>
+            <p>We've introduced an intelligent code review system that analyzes your pull requests and provides actionable feedback in seconds.</p>
+
+            <h3>What's New</h3>
+            <ul>
+              <li>Automatic detection of common security vulnerabilities and anti-patterns</li>
+              <li>Smart suggestions for code optimization and readability improvements</li>
+              <li>Integration with GitHub, GitLab, and Bitbucket repositories</li>
+              <li>Customizable review rules based on your team's coding standards</li>
+            </ul>
+
+            <h3>Improvements</h3>
+            <ul>
+              <li>Reduced initial load time by 40% through lazy loading components</li>
+              <li>Enhanced keyboard navigation throughout the application</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="entry" data-date="Dec 21, 2024">
+          <div class="entry-date">December 21, 2024</div>
+          <div class="entry-card">
+            <span class="tag improvement">Improvement</span>
+            <h2>Enhanced Dashboard Experience</h2>
+
+            <h3>Dashboard Updates</h3>
+            <ul>
+              <li>Redesigned project overview with real-time activity feeds</li>
+              <li>New customizable widgets for tracking deployments and build status</li>
+              <li>Added dark mode support with automatic system preference detection</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+              <li>Optimized database queries reducing API response times by 60%</li>
+              <li>Implemented connection pooling for better resource management</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="entry" data-date="Dec 14, 2024">
+          <div class="entry-date">December 14, 2024</div>
+          <div class="entry-card">
+            <span class="tag fix">Bug Fixes</span>
+            <h2>Stability Improvements</h2>
+
+            <ul>
+              <li>Fixed an issue where notifications would occasionally not appear for new comments</li>
+              <li>Resolved a bug causing the search feature to return incomplete results for large repositories</li>
+              <li>Corrected timezone handling in scheduled deployment features</li>
+              <li>Fixed memory leak in the real-time collaboration module</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>Generated with <a href="#">AutoLog</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Sticky date indicator
+    const entries = document.querySelectorAll('.entry');
+    const indicator = document.getElementById('dateIndicator');
+    const timelineProgress = document.getElementById('timelineProgress');
+    const timelineWrapper = document.querySelector('.timeline-wrapper');
+
+    const observer = new IntersectionObserver((observerEntries) => {
+      observerEntries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const date = new Date(entry.target.dataset.date);
+          indicator.querySelector('.month').textContent = date.toLocaleString('en', { month: 'short' });
+          indicator.querySelector('.day').textContent = date.getDate();
+          indicator.querySelector('.year').textContent = date.getFullYear();
+          indicator.classList.add('visible');
+
+          // Update active state on entries
+          entries.forEach(e => e.classList.remove('active'));
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3, rootMargin: '-20% 0px -60% 0px' });
+
+    entries.forEach(entry => observer.observe(entry));
+
+    // Animated progress line
+    function updateProgress() {
+      if (!timelineWrapper) return;
+
+      const wrapperRect = timelineWrapper.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      // Calculate how much of the timeline is above the viewport center
+      const wrapperTop = wrapperRect.top;
+      const wrapperHeight = wrapperRect.height;
+      const scrollCenter = viewportHeight * 0.4;
+
+      // Progress: 0 when top of wrapper is at viewport center, 1 when bottom is at center
+      const progress = Math.max(0, Math.min(1, (scrollCenter - wrapperTop) / wrapperHeight));
+
+      timelineProgress.style.height = (progress * wrapperHeight) + 'px';
+    }
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY < 200) {
+        indicator.classList.remove('visible');
+      }
+      updateProgress();
+    });
+
+    updateProgress();
+  </script>
+</body>
+</html>

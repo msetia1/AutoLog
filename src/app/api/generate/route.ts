@@ -7,7 +7,7 @@ import { generateChangelog } from "@/lib/openrouter";
 const MAX_COMMITS = 50; // Safety cap
 
 export async function POST(request: Request) {
-  const { owner, repo, since, limit } = await request.json();
+  const { owner, repo, since, limit, additionalContext, clarifyingAnswers } = await request.json();
 
   if (!owner || !repo) {
     return Response.json({ error: "Missing owner or repo" }, { status: 400 });
@@ -56,7 +56,10 @@ export async function POST(request: Request) {
 
     // Generate changelog with streaming
     console.log("Calling OpenRouter with", commits.length, "commits...");
-    const stream = await generateChangelog(commits);
+    const stream = await generateChangelog(commits, {
+      additionalContext,
+      clarifyingAnswers,
+    });
     console.log("Got stream from OpenRouter");
 
     // Transform SSE stream to extract just the content

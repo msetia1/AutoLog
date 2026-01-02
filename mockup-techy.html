@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - Tech Aesthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0D1117;
+      --bg-card: #161B22;
+      --bg-elevated: #1C2128;
+      --text-primary: #E6EDF3;
+      --text-secondary: #8B949E;
+      --text-muted: #484F58;
+      --border: #30363D;
+      --accent: #58A6FF;
+      --accent-dim: #1F6FEB;
+      --green: #3FB950;
+      --yellow: #D29922;
+      --red: #F85149;
+      --purple: #A371F7;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 64px 64px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 64px 32px;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 48px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .header h1 .slash {
+      color: var(--text-muted);
+    }
+
+    .header h1 .repo {
+      color: var(--accent);
+    }
+
+    .version-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 3px 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Timeline Layout */
+    .changelog {
+      position: relative;
+    }
+
+    /* Sticky Date Sidebar */
+    .date-indicator {
+      position: fixed;
+      left: max(24px, calc((100vw - 960px) / 2 - 160px));
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .date-indicator.visible {
+      opacity: 1;
+    }
+
+    .date-indicator .terminal-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .date-indicator .terminal-line .prompt {
+      color: var(--green);
+    }
+
+    .date-indicator .date-display {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .date-indicator .timestamp {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Timeline Container */
+    .timeline-wrapper {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    /* Timeline line background */
+    .timeline-line {
+      position: absolute;
+      left: 12px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent 0%, var(--border) 10%, var(--border) 90%, transparent 100%);
+    }
+
+    /* Animated progress line */
+    .timeline-progress {
+      position: absolute;
+      left: 12px;
+      top: 0;
+      width: 2px;
+      height: 0;
+      background: linear-gradient(to bottom, transparent, var(--green) 20%, var(--green));
+      border-radius: 2px;
+      transition: height 0.1s ease-out;
+      box-shadow: 0 0 8px rgba(63, 185, 80, 0.3);
+    }
+
+    /* Entries */
+    .entry {
+      position: relative;
+      padding-bottom: 32px;
+    }
+
+    .entry:last-child {
+      padding-bottom: 0;
+    }
+
+    .entry::before {
+      content: '';
+      position: absolute;
+      left: -30px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+
+    .entry.active::before {
+      border-color: var(--green);
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(63, 185, 80, 0.4);
+    }
+
+    .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .entry-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 8px;
+      background: var(--bg-elevated);
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .commit-hash {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      opacity: 0.7;
+    }
+
+    .entry-card {
+      background: var(--bg-card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .entry-card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+
+    .entry-card-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .entry-card-body {
+      padding: 20px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .section-header.features {
+      color: var(--green);
+    }
+
+    .section-header.improvements {
+      color: var(--accent);
+    }
+
+    .section-header.fixes {
+      color: var(--red);
+    }
+
+    .section-header::before {
+      content: '//';
+      opacity: 0.5;
+    }
+
+    .entry-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .entry-card li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .entry-card li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .entry-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .tag.feature {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .tag.improvement {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+    }
+
+    .tag.fix {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+
+    .tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Code snippets */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 2px 6px;
+      background: var(--bg-elevated);
+      border-radius: 4px;
+      color: var(--purple);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .date-indicator {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="date-indicator" id="dateIndicator">
+    <div class="terminal-line">
+      <span class="prompt">$</span>
+      <span>git log --date</span>
+    </div>
+    <div class="date-display">Dec 28</div>
+    <div class="timestamp">2024-12-28T14:32:00Z</div>
+  </div>
+
+  <div class="container">
+    <header class="header">
+      <div class="header-top">
+        <h1><span class="slash">~/</span><span class="repo">devflow</span>/changelog</h1>
+        <span class="version-badge">v2.4.0</span>
+      </div>
+      <p>Release notes and updates</p>
+    </header>
+
+    <div class="changelog">
+      <div class="timeline-wrapper">
+        <div class="timeline-line"></div>
+        <div class="timeline-progress" id="timelineProgress"></div>
+
+        <article class="entry active" data-date="Dec 28, 2024">
+          <div class="entry-header">
+            <div class="entry-date">2024-12-28</div>
+            <div class="commit-hash">#a3f2c91</div>
+          </div>
+          <div class="entry-card">
+            <div class="entry-card-header">
+              <h2>
+                <span class="tag feature">Feature</span>
+                AI-Powered Code Review
+              </h2>
+            </div>
+            <div class="entry-card-body">
+              <p>Introducing an intelligent code review system that analyzes pull requests and provides actionable feedback in seconds.</p>
+
+              <div class="section">
+                <div class="section-header features">New Capabilities</div>
+                <ul>
+                  <li>Automatic detection of security vulnerabilities and anti-patterns</li>
+                  <li>Smart suggestions for code optimization and readability</li>
+                  <li>Integration with GitHub, GitLab, and Bitbucket via <code>@devflow/connect</code></li>
+                  <li>Customizable review rules based on team coding standards</li>
+                </ul>
+              </div>
+
+              <div class="section">
+                <div class="section-header improvements">Performance</div>
+                <ul>
+                  <li>Reduced initial load time by 40% through lazy loading</li>
+                  <li>Enhanced keyboard navigation across all views</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="entry" data-date="Dec 21, 2024">
+          <div class="entry-header">
+            <div class="entry-date">2024-12-21</div>
+            <div class="commit-hash">#b7e4d82</div>
+          </div>
+          <div class="entry-card">
+            <div class="entry-card-header">
+              <h2>
+                <span class="tag improvement">Improvement</span>
+                Enhanced Dashboard Experience
+              </h2>
+            </div>
+            <div class="entry-card-body">
+              <div class="section">
+                <div class="section-header features">Dashboard Updates</div>
+                <ul>
+                  <li>Redesigned project overview with real-time activity feeds</li>
+                  <li>New customizable widgets for deployments and build status</li>
+                  <li>Added dark mode with automatic system preference detection</li>
+                </ul>
+              </div>
+
+              <div class="section">
+                <div class="section-header improvements">Backend</div>
+                <ul>
+                  <li>Optimized database queries — 60% faster API response times</li>
+                  <li>Implemented connection pooling for better resource management</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="entry" data-date="Dec 14, 2024">
+          <div class="entry-header">
+            <div class="entry-date">2024-12-14</div>
+            <div class="commit-hash">#c9f1a23</div>
+          </div>
+          <div class="entry-card">
+            <div class="entry-card-header">
+              <h2>
+                <span class="tag fix">Bugfix</span>
+                Stability Improvements
+              </h2>
+            </div>
+            <div class="entry-card-body">
+              <div class="section">
+                <div class="section-header fixes">Resolved Issues</div>
+                <ul>
+                  <li>Fixed notifications not appearing for new comments</li>
+                  <li>Resolved incomplete search results for large repositories</li>
+                  <li>Corrected timezone handling in scheduled deployments</li>
+                  <li>Fixed memory leak in real-time collaboration module</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>generated_with <a href="#">autolog</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Sticky date indicator
+    const entries = document.querySelectorAll('.entry');
+    const indicator = document.getElementById('dateIndicator');
+    const timelineProgress = document.getElementById('timelineProgress');
+    const timelineWrapper = document.querySelector('.timeline-wrapper');
+
+    const observer = new IntersectionObserver((observerEntries) => {
+      observerEntries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const dateStr = entry.target.dataset.date;
+          const date = new Date(dateStr);
+          const month = date.toLocaleString('en', { month: 'short' });
+          const day = date.getDate();
+          indicator.querySelector('.date-display').textContent = `${month} ${day}`;
+          indicator.querySelector('.timestamp').textContent = date.toISOString().split('.')[0] + 'Z';
+          indicator.classList.add('visible');
+
+          // Update active state on entries
+          entries.forEach(e => e.classList.remove('active'));
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3, rootMargin: '-20% 0px -60% 0px' });
+
+    entries.forEach(entry => observer.observe(entry));
+
+    // Animated progress line
+    function updateProgress() {
+      if (!timelineWrapper) return;
+
+      const wrapperRect = timelineWrapper.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      // Calculate how much of the timeline is above the viewport center
+      const wrapperTop = wrapperRect.top;
+      const wrapperHeight = wrapperRect.height;
+      const scrollCenter = viewportHeight * 0.4;
+
+      // Progress: 0 when top of wrapper is at viewport center, 1 when bottom is at center
+      const progress = Math.max(0, Math.min(1, (scrollCenter - wrapperTop) / wrapperHeight));
+
+      timelineProgress.style.height = (progress * wrapperHeight) + 'px';
+    }
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY < 150) {
+        indicator.classList.remove('visible');
+      }
+      updateProgress();
+    });
+
+    updateProgress();
+  </script>
+</body>
+</html>

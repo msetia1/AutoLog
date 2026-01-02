@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
-import ReactMarkdown from "react-markdown";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ChangelogTimeline } from "@/components/changelog-timeline";
 
 interface Props {
   params: Promise<{
@@ -43,52 +43,33 @@ export default async function ChangelogPage({ params }: Props) {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto py-12 px-4">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold mb-2">
-            {owner}/{repo}
-          </h1>
-          <p className="text-muted-foreground">Changelog</p>
-        </div>
-
-        {/* Entries */}
-        {!entries || entries.length === 0 ? (
-          <p className="text-muted-foreground">No changelog entries yet.</p>
-        ) : (
-          <div className="space-y-12">
-            {entries.map((entry) => (
-              <article key={entry.id} className="relative">
-                <div className="flex items-center gap-3 mb-4">
-                  <time className="text-sm font-medium text-muted-foreground">
-                    {new Date(entry.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </time>
-                </div>
-                <div className="neo-card bg-white p-6 rounded-md">
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{entry.content}</ReactMarkdown>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {/* Footer */}
-        <footer className="mt-16 pt-8 border-t border-gray-200">
-          <p className="text-sm text-muted-foreground text-center">
-            Generated with{" "}
-            <a href="/" className="underline hover:text-black">
-              AutoLog
-            </a>
-          </p>
-        </footer>
+    <div className="min-h-screen bg-neutral-950">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto pt-16 px-4 md:px-8 lg:px-10">
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          {owner}/{repo}
+        </h1>
+        <p className="text-neutral-400">Changelog</p>
       </div>
+
+      {/* Timeline */}
+      {!entries || entries.length === 0 ? (
+        <div className="max-w-7xl mx-auto py-20 px-4 md:px-8 lg:px-10">
+          <p className="text-neutral-500">No changelog entries yet.</p>
+        </div>
+      ) : (
+        <ChangelogTimeline entries={entries} />
+      )}
+
+      {/* Footer */}
+      <footer className="max-w-7xl mx-auto px-4 md:px-8 lg:px-10 py-12 border-t border-neutral-800">
+        <p className="text-sm text-neutral-500 text-center">
+          Generated with{" "}
+          <a href="/" className="text-neutral-400 hover:text-white transition-colors">
+            AutoLog
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
