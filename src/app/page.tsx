@@ -1,18 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "@/lib/auth-client";
+import { Spotlight } from "@/components/ui/spotlight";
 
 export default function Home() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
+
+  // Typewriter effect
+  const [titleText, setTitleText] = useState("");
+  const [titleComplete, setTitleComplete] = useState(false);
 
   useEffect(() => {
     if (session) {
       router.push("/dashboard");
     }
   }, [session, router]);
+
+  // Typewriter animation
+  useEffect(() => {
+    const fullWord = "auto changelog";
+    const deleteUntil = 4; // Keep "auto"
+    const finalWord = "autolog";
+    const typeSpeed = 80;
+    const deleteSpeed = 40;
+    const pauseBeforeDelete = 1500;
+    const pauseBeforeType = 300;
+
+    let timeout: NodeJS.Timeout;
+    let currentIndex = 0;
+    let phase: "typing" | "pausing" | "deleting" | "typing-final" | "done" = "typing";
+
+    const animate = () => {
+      if (phase === "typing") {
+        if (currentIndex < fullWord.length) {
+          setTitleText(fullWord.slice(0, currentIndex + 1));
+          currentIndex++;
+          timeout = setTimeout(animate, typeSpeed);
+        } else {
+          phase = "pausing";
+          timeout = setTimeout(animate, pauseBeforeDelete);
+        }
+      } else if (phase === "pausing") {
+        phase = "deleting";
+        currentIndex = fullWord.length;
+        animate();
+      } else if (phase === "deleting") {
+        if (currentIndex > deleteUntil) {
+          currentIndex--;
+          setTitleText(fullWord.slice(0, currentIndex));
+          timeout = setTimeout(animate, deleteSpeed);
+        } else {
+          phase = "typing-final";
+          currentIndex = deleteUntil;
+          timeout = setTimeout(animate, pauseBeforeType);
+        }
+      } else if (phase === "typing-final") {
+        if (currentIndex < finalWord.length) {
+          setTitleText(finalWord.slice(0, currentIndex + 1));
+          currentIndex++;
+          timeout = setTimeout(animate, typeSpeed);
+        } else {
+          phase = "done";
+          // Blink 3 times before hiding cursor
+          timeout = setTimeout(() => setTitleComplete(true), 3000);
+        }
+      }
+    };
+
+    timeout = setTimeout(animate, 300);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   if (isPending || session) {
     return (
@@ -23,13 +84,24 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-950">
-      <div className="text-center max-w-md px-4">
-        <h1 className="text-5xl font-semibold text-white mb-4 tracking-tight">
-          AutoLog
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-neutral-950 overflow-hidden">
+      <Spotlight
+        className="-top-40 left-0 md:left-60 md:-top-20"
+        fill="white"
+      />
+
+      <div className="relative z-10 text-center max-w-md px-4">
+        <h1
+          className="text-5xl font-semibold text-white mb-4 tracking-tight"
+          style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}
+        >
+          {titleText}
+          <span
+            className={`inline-block w-[3px] h-[1em] bg-white ml-1 align-middle ${titleComplete ? 'opacity-0' : 'animate-[blink_1s_step-end_infinite]'}`}
+          />
         </h1>
         <p className="text-neutral-400 text-lg mb-10">
-          AI-powered changelogs from your commits
+          AI-powered changelogs from your commits in seconds
         </p>
 
         <button
@@ -42,12 +114,6 @@ export default function Home() {
           Sign in with GitHub
         </button>
       </div>
-
-      <footer className="absolute bottom-8 text-center">
-        <p className="text-sm text-neutral-600">
-          Ship better changelogs in seconds
-        </p>
-      </footer>
     </div>
   );
 }

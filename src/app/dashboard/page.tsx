@@ -82,9 +82,9 @@ export default function Dashboard() {
 
   // Range options
   const rangeOptions = [
+    { value: "since-last", label: "Since last" },
     { value: "days-7", label: "Last 7 days" },
     { value: "days-30", label: "Last 30 days" },
-    { value: "days-90", label: "Last 90 days" },
     { value: "commits-25", label: "25 commits" },
     { value: "commits-50", label: "50 commits" },
   ];
@@ -209,17 +209,19 @@ export default function Dashboard() {
   function buildParams() {
     const [owner, repo] = selectedRepo.split("/");
     const [type, value] = rangeType.split("-");
-    const params: { owner: string; repo: string; since?: string; limit?: number; additionalContext?: string } = {
+    const params: { owner: string; repo: string; since?: string; limit?: number; sinceLast?: boolean; additionalContext?: string } = {
       owner,
       repo,
       additionalContext: additionalContext || undefined,
     };
 
-    if (type === "days") {
+    if (type === "since" && value === "last") {
+      params.sinceLast = true;
+    } else if (type === "days") {
       const date = new Date();
       date.setDate(date.getDate() - parseInt(value));
       params.since = date.toISOString();
-    } else {
+    } else if (type === "commits") {
       params.limit = parseInt(value);
     }
 
@@ -248,8 +250,10 @@ export default function Dashboard() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        if (errorData.error?.includes("No commits")) {
-          setGenerateError("No commits found in this range. Try a wider date range or select by commit count.");
+        // Handle specific error messages
+        if (errorData.error?.includes("No previous changelog") ||
+            errorData.error?.includes("No commits")) {
+          setGenerateError(errorData.error);
           setGenerationPhase("idle");
           return;
         }
@@ -302,11 +306,7 @@ export default function Dashboard() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        if (errorData.error?.includes("No commits")) {
-          setGenerateError("No commits found in this range. Try a wider date range or select by commit count.");
-        } else {
-          setGenerateError(errorData.error || "Failed to generate changelog");
-        }
+        setGenerateError(errorData.error || "Failed to generate changelog");
         setGenerationPhase("idle");
         setGenerationStatus("");
         return;
@@ -439,30 +439,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0a]">
-      {/* Grid background */}
-      <div
-        className="absolute inset-0 [background-size:20px_20px] [background-image:linear-gradient(to_right,#262626_1px,transparent_1px),linear-gradient(to_bottom,#262626_1px,transparent_1px)]"
-      />
-      {/* Radial fade */}
-      <div className="pointer-events-none absolute inset-0 bg-[#0a0a0a] [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
-
-      <div className="relative z-10 max-w-[1100px] mx-auto px-6 min-h-screen flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="max-w-[1100px] mx-auto px-6 min-h-screen flex flex-col">
         {/* Header */}
         <header className="flex justify-between items-center py-6">
-          <div className="text-xl text-[#4AF262] flex items-center" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
+          <div className="text-xl text-white flex items-center" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
             {titleText}
             {!titleComplete && (
               <span
-                className="inline-block w-[2px] h-[1.1em] bg-[#4AF262] ml-0.5 animate-[blink_1s_step-end_infinite]"
+                className="inline-block w-[2px] h-[1.1em] bg-white ml-0.5 animate-[blink_1s_step-end_infinite]"
               />
             )}
           </div>
-          <div className="flex items-center gap-4" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
+          <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-500">{session.user.name}</span>
             <button
               onClick={() => signOut()}
-              className="px-3 py-1.5 text-sm bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-lg hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 transition-all"
+              className="px-3 py-1.5 text-sm bg-white/10 border border-white/30 text-white rounded-lg hover:bg-white/15 hover:border-white/50 transition-all"
             >
               Sign out
             </button>
@@ -511,7 +504,7 @@ export default function Dashboard() {
                       disabled={generationPhase !== "idle"}
                       className={`px-4 py-2 text-sm rounded-lg border transition-all ${
                         rangeType === option.value
-                          ? "bg-[#4AF262]/15 border-[#4AF262]/50 text-[#4AF262] font-medium"
+                          ? "bg-white/10 border-white/30 text-white font-medium"
                           : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
@@ -539,11 +532,8 @@ export default function Dashboard() {
               <button
                 onClick={handleGenerate}
                 disabled={!selectedRepo || commits.length === 0 || generationPhase !== "idle"}
-                className="w-full py-4 text-sm font-semibold bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-xl hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 text-sm font-semibold bg-white/10 border border-white/30 text-white rounded-xl hover:bg-white/15 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
                 {generationPhase === "analyzing" ? "Analyzing..." :
                  generationPhase === "generating" ? "Generating..." :
                  generationPhase === "questions" ? "Answer Questions Below" :
@@ -554,10 +544,12 @@ export default function Dashboard() {
 
             {/* Sidebar - Recent Changelogs */}
             <aside className="flex">
-              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 flex-1">
+              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 flex-1 flex flex-col">
                 <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Recent Changelogs</h2>
                 {recentEntries.length === 0 ? (
-                  <p className="text-sm text-neutral-600">No changelogs yet</p>
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-sm text-neutral-600">No changelogs yet</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {recentEntries.map((entry) => (
@@ -587,7 +579,7 @@ export default function Dashboard() {
           {generationPhase === "analyzing" && (
             <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
               <div className="flex items-center gap-3">
-                <div className="animate-spin w-5 h-5 border-2 border-neutral-700 border-t-[#4AF262] rounded-full" />
+                <div className="animate-spin w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full" />
                 <span className="text-neutral-400">Analyzing commits...</span>
               </div>
             </div>
@@ -634,7 +626,7 @@ export default function Dashboard() {
                     <button
                       onClick={handlePublish}
                       disabled={publishing || !!publishedUrl}
-                      className="px-4 py-1.5 text-xs font-medium bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-lg hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="px-4 py-1.5 text-xs font-medium bg-white/10 border border-white/30 text-white rounded-lg hover:bg-white/15 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {publishing ? "Publishing..." : publishedUrl ? "Published" : "Publish"}
                     </button>
@@ -652,7 +644,7 @@ export default function Dashboard() {
                 ) : generationPhase === "generating" ? (
                   <div className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="animate-spin w-4 h-4 border-2 border-neutral-700 border-t-[#4AF262] rounded-full" />
+                      <div className="animate-spin w-4 h-4 border-2 border-neutral-700 border-t-white rounded-full" />
                       <span className="text-neutral-400 text-sm">{generationStatus || "Starting generation..."}</span>
                     </div>
                   </div>
@@ -670,12 +662,12 @@ export default function Dashboard() {
                 )}
               </div>
               {publishedUrl && (
-                <div className="mt-4 p-3 bg-[#4AF262]/10 border border-[#4AF262]/30 rounded-lg">
-                  <p className="text-sm text-[#4AF262]">
+                <div className="mt-4 p-3 bg-white/10 border border-white/30 rounded-lg">
+                  <p className="text-sm text-white">
                     Published successfully!{" "}
                     <a
                       href={publishedUrl}
-                      className="underline hover:text-[#3DD855]"
+                      className="underline hover:text-neutral-300"
                       target="_blank"
                       rel="noopener noreferrer"
                     >

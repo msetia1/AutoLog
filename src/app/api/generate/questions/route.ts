@@ -7,7 +7,7 @@ import { generateClarifyingQuestions } from "@/lib/openrouter";
 const MAX_COMMITS = 50;
 
 export async function POST(request: Request) {
-  const { owner, repo, since, limit, additionalContext } = await request.json();
+  const { owner, repo, since, sinceLast, limit, additionalContext } = await request.json();
 
   if (!owner || !repo) {
     return Response.json({ error: "Missing owner or repo" }, { status: 400 });
@@ -36,12 +36,37 @@ export async function POST(request: Request) {
     return Response.json({ error: "GitHub account not found" }, { status: 400 });
   }
 
+  // Determine the since date
+  let effectiveSince = since;
+
+  if (sinceLast) {
+    // Look up the most recent changelog for this repo
+    const { data: lastEntry } = await supabase
+      .from("changelog_entries")
+      .select("created_at")
+      .eq("owner", owner)
+      .eq("repo_name", repo)
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!lastEntry) {
+      return Response.json({ error: "No previous changelog for this project" }, { status: 400 });
+    }
+
+    effectiveSince = lastEntry.created_at;
+  }
+
   try {
     // Fetch commits with diffs
-    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, since);
+    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, effectiveSince);
 
     if (commits.length === 0) {
-      return Response.json({ error: "No commits found in this range" }, { status: 400 });
+      const errorMsg = sinceLast
+        ? "No commits since last changelog"
+        : "No commits found in this range";
+      return Response.json({ error: errorMsg }, { status: 400 });
     }
 
     // Apply limit

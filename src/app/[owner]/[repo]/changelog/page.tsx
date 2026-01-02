@@ -42,8 +42,10 @@ export default async function ChangelogPage({ params }: Props) {
     .eq("published", true)
     .order("created_at", { ascending: false });
 
+  const fontFamily = '"Mona Sans", "Mona Sans Fallback", -apple-system, "system-ui", "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
+
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-neutral-950" style={{ fontFamily }}>
       {/* Header */}
       <div className="max-w-7xl mx-auto pt-16 px-4 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
