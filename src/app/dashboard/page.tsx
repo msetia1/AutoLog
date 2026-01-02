@@ -7,6 +7,8 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { Dropdown } from "@/components/ui/dropdown-01";
 import ReactMarkdown from "react-markdown";
 import { ClarifyingQuestions } from "@/components/clarifying-questions";
+import { ChangelogPreviewModal } from "@/components/changelog-preview-modal";
+import { LoaderFive } from "@/components/ui/loader";
 import type { Repo, Commit } from "@/lib/github";
 import type { ClarifyingQuestion } from "@/lib/openrouter";
 
@@ -60,7 +62,10 @@ export default function Dashboard() {
   const [loadingCommits, setLoadingCommits] = useState(false);
   const [changelog, setChangelog] = useState<string>("");
   const [generateError, setGenerateError] = useState<string>("");
-  const [editorMode, setEditorMode] = useState<"edit" | "preview">("preview");
+  const [editorMode, setEditorMode] = useState<"view" | "edit">("view");
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [repoPublishedEntries, setRepoPublishedEntries] = useState<ChangelogEntry[]>([]);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [rangeType, setRangeType] = useState<string>("commits-25");
   const [publishing, setPublishing] = useState(false);
@@ -82,7 +87,7 @@ export default function Dashboard() {
 
   // Range options
   const rangeOptions = [
-    { value: "since-last", label: "Since last" },
+    { value: "since-last", label: "Since last entry" },
     { value: "days-7", label: "Last 7 days" },
     { value: "days-30", label: "Last 30 days" },
     { value: "commits-25", label: "25 commits" },
@@ -396,6 +401,31 @@ export default function Dashboard() {
     }
   }
 
+  // Open preview modal with published entries
+  async function handleOpenPreview() {
+    if (!selectedRepo || !changelog) return;
+
+    const [owner, repo] = selectedRepo.split("/");
+    setLoadingPreview(true);
+
+    try {
+      const res = await fetch(`/api/entries?owner=${owner}&repo=${repo}`);
+      if (res.ok) {
+        const entries = await res.json();
+        setRepoPublishedEntries(entries);
+      } else {
+        setRepoPublishedEntries([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch repo entries:", err);
+      setRepoPublishedEntries([]);
+    } finally {
+      setLoadingPreview(false);
+    }
+
+    setShowPreviewModal(true);
+  }
+
   // Format relative time
   function formatRelativeTime(dateStr: string): string {
     const date = new Date(dateStr);
@@ -464,10 +494,10 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="flex flex-col gap-6 flex-1 justify-center py-12">
-          {/* Top Row - Generate Card + Recent Changelogs */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-stretch">
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
             {/* Main Card */}
-            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
+            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8 lg:row-span-1">
               {/* Title */}
               <div className="mb-8 text-center">
                 <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Generate Changelog</h1>
@@ -496,13 +526,13 @@ export default function Dashboard() {
                 <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
                   Time Range
                 </label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {rangeOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => setRangeType(option.value)}
                       disabled={generationPhase !== "idle"}
-                      className={`px-4 py-2 text-sm rounded-lg border transition-all ${
+                      className={`flex-1 whitespace-nowrap px-4 py-2 text-sm rounded-lg border transition-all ${
                         rangeType === option.value
                           ? "bg-white/10 border-white/30 text-white font-medium"
                           : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
@@ -543,8 +573,7 @@ export default function Dashboard() {
             </div>
 
             {/* Sidebar - Recent Changelogs */}
-            <aside className="flex">
-              <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 flex-1 flex flex-col">
+            <aside className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6 flex flex-col min-w-0">
                 <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Recent Changelogs</h2>
                 {recentEntries.length === 0 ? (
                   <div className="flex-1 flex items-center justify-center">
@@ -570,59 +599,60 @@ export default function Dashboard() {
                     ))}
                   </div>
                 )}
-              </div>
             </aside>
-          </div>
 
-          {/* Bottom Row - Full Width Results/Questions */}
-          {/* Analyzing State */}
-          {generationPhase === "analyzing" && (
-            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
-              <div className="flex items-center gap-3">
-                <div className="animate-spin w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full" />
-                <span className="text-neutral-400">Analyzing commits...</span>
+            {/* Analyzing State - spans full width */}
+            {generationPhase === "analyzing" && (
+              <div className="col-span-full bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8 flex items-center justify-center">
+                <LoaderFive text="Analyzing commits..." />
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Clarifying Questions */}
-          {generationPhase === "questions" && questions.length > 0 && (
-            <ClarifyingQuestions
-              questions={questions}
-              onComplete={handleQuestionsComplete}
-              onSkip={handleSkipQuestions}
-            />
-          )}
+            {/* Clarifying Questions - spans full width */}
+            {generationPhase === "questions" && questions.length > 0 && (
+              <div className="col-span-full">
+                <ClarifyingQuestions
+                  questions={questions}
+                  onComplete={handleQuestionsComplete}
+                  onSkip={handleSkipQuestions}
+                />
+              </div>
+            )}
 
-          {/* Generated Changelog */}
-          {(changelog || generationPhase === "generating" || generateError) && (
-            <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
+            {/* Generated Changelog - spans full width */}
+            {(changelog || generationPhase === "generating" || generateError) && (
+              <div className="col-span-full bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-white">Result</h2>
+                <h2 className="text-lg font-semibold text-white">Changelog Entry</h2>
                 {changelog && generationPhase === "idle" && !generateError && (
-                  <div className="flex gap-3 items-center">
-                    <div className="flex gap-1 bg-neutral-900 p-1 rounded-lg">
+                  <div className="flex gap-2 items-center">
+                    {editorMode === "view" ? (
+                      <>
+                        <button
+                          onClick={() => setEditorMode("edit")}
+                          className="px-3 py-1.5 text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleOpenPreview}
+                          disabled={loadingPreview}
+                          className="px-3 py-1.5 text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {loadingPreview && (
+                            <div className="animate-spin w-3 h-3 border-2 border-neutral-600 border-t-white rounded-full" />
+                          )}
+                          Preview
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={() => setEditorMode("edit")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          editorMode === "edit"
-                            ? "bg-neutral-700 text-white"
-                            : "text-neutral-400 hover:text-white"
-                        }`}
+                        onClick={() => setEditorMode("view")}
+                        className="px-3 py-1.5 text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
                       >
-                        Edit
+                        Done
                       </button>
-                      <button
-                        onClick={() => setEditorMode("preview")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          editorMode === "preview"
-                            ? "bg-neutral-700 text-white"
-                            : "text-neutral-400 hover:text-white"
-                        }`}
-                      >
-                        Preview
-                      </button>
-                    </div>
+                    )}
                     <button
                       onClick={handlePublish}
                       disabled={publishing || !!publishedUrl}
@@ -642,11 +672,8 @@ export default function Dashboard() {
                     {generateError}
                   </div>
                 ) : generationPhase === "generating" ? (
-                  <div className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="animate-spin w-4 h-4 border-2 border-neutral-700 border-t-white rounded-full" />
-                      <span className="text-neutral-400 text-sm">{generationStatus || "Starting generation..."}</span>
-                    </div>
+                  <div className="p-8 flex items-center justify-center">
+                    <LoaderFive text={generationStatus || "Analyzing commits..."} />
                   </div>
                 ) : editorMode === "edit" ? (
                   <textarea
@@ -678,6 +705,16 @@ export default function Dashboard() {
               )}
             </div>
           )}
+          </div>
+
+          {/* Preview Modal */}
+          <ChangelogPreviewModal
+            isOpen={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            draftContent={changelog}
+            publishedEntries={repoPublishedEntries}
+            repoName={selectedRepo.split("/")[1] || selectedRepo}
+          />
         </div>
       </div>
     </div>

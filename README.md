@@ -30,8 +30,8 @@ OPENROUTER_API_KEY=
 ## Technical Decisions
 
 ### Stack
-- **Next.js (App Router)** — Single codebase for frontend + API, simple Vercel deployment
-- **Better Auth** — TypeScript-first auth library with GitHub OAuth. Simpler than NextAuth, gives us the GitHub access token needed for repo access.
+- **Next.js (App Router)** — Single codebase for frontend + API, easy Vercel deployment
+- **Better Auth** — TypeScript-first auth library with GitHub OAuth. Simpler than NextAuth, gives us the GitHub access token needed for repo access. (thanks Soohoon :D)
 - **Supabase (Postgres)** — Persists users, repos, and changelog entries
 - **OpenRouter** — LLM gateway that allows model switching without code changes
 
@@ -40,8 +40,21 @@ OPENROUTER_API_KEY=
 - **Multi-tenant** — Any user can sign in and connect their repos
 - **Streaming LLM responses** — Vercel hobby tier has a 10s function timeout. LLM calls can exceed that. Streaming keeps the connection alive and provides better UX.
 - **Public page structure** — Dates only (no version numbers). `/{owner}/{repo}/changelog` for public pages, `/dashboard` for the dev-facing tool.
-- **Edit flow** — Textarea with markdown preview. Developer can edit AI output before publishing.
+- **Edit flow** — Textarea with markdown preview. Developer can edit AI output and preview what it would look like on their existing changelog before publishing.
 - **Styling** — Tailwind + shadcn/ui. Clean, minimal aesthetic.
+
+---
+
+## Changelog Generation Flow
+
+1. **Fetch commits** — Pull commits with diffs from GitHub API based on user's selected range
+2. **Filter noise** — Remove node_modules, lock files, build artifacts, etc.
+3. **Generate clarifying questions** — LLM analyzes a compact summary (messages + file paths, no diffs) and generates 2-4 targeted questions
+4. **User answers questions** — Or skips individual questions / all of them
+5. **Build detailed commit data** — Include file paths with +/- line counts. Conditionally include truncated diffs only for vague commits (messages < 5 words or containing "fix", "update", "wip", etc.)
+6. **Generate changelog:**
+   - ≤12 commits → single LLM call
+   - \>12 commits → chunk into batches of 12, generate partial changelogs, merge into final output
 
 ---
 
@@ -49,10 +62,10 @@ OPENROUTER_API_KEY=
 
 ### Handling Large Repositories
 
-**Problem:** Users connecting repos with many commits would exceed LLM context limits (hit 478K tokens on a 48-commit repo with full diffs).
+**Problem:** Users connecting repos with many commits would exceed LLM context limits.
 
 **Solution:** Layered approach:
-1. **Range selector** — Users choose "Last 7/30/90 days" or "Last 25/50 commits"
+1. **Range selector** — Users choose "Since last entry", "Last 7/30 days" or "Last 25/50 commits"
 2. **Commit cap** — Hard limit of 50 commits regardless of selection
 3. **Diff truncation** — Each file's patch capped at 500 characters
 
@@ -64,16 +77,11 @@ OPENROUTER_API_KEY=
 
 **Solution:**
 - Always include file paths with +/- line counts (shows scope even without good messages)
-- Prompt instructs LLM to infer features from file paths and diffs
+- Only include code diffs for vague commits; well-described commits don't need the extra context
 - Truncated diffs (500 chars) still capture the "shape" of changes
+- Prompt instructs LLM to infer features from file paths and diffs
 
-### Output Quality vs Input Size
-
-**Observation:** 50 commits produced generic summaries ("Added calendar features"), while 25 commits produced specific details ("Added a revert button to undo AI-suggested changes").
-
-**Why:** LLMs compress when given more input. Less input = more room for detail.
-
-**Solution:** Prompt engineering with explicit BAD/GOOD examples to anchor expected specificity.
+**Rejected:** Including diffs for all commits (wastes tokens), or never including diffs (loses context for bad messages).
 
 ### Changelog Grouping Strategy
 
@@ -89,6 +97,31 @@ OPENROUTER_API_KEY=
 **Excluded from context:** node_modules, lock files, markdown files, build artifacts, .env files
 
 **Why:** These add tokens without useful changelog information.
+
+### Commit Chunking
+
+For large commit ranges, process in batches of 12 and merge partial changelogs into a final result.
+
+**Rejected:** Processing all commits in a single LLM call (hits rate limits and context limits).
+
+### Two-Phase Generation Flow
+
+Before generating, the AI asks 2-4 targeted questions about user preferences (detail level, which areas to highlight, audience). Users can skip individual questions or all of them. Answers become context for better output.
+
+**Rejected:** One-click generation with no user input.
+
+### "Since Last Entry" Time Range
+
+Users can generate changelogs for commits since their last published entry, supporting an incremental workflow.
+
+**Rejected:** Only offering fixed time ranges (7/30 days) or commit counts.
+
+
+### Preview with Context
+
+Preview modal shows the draft changelog alongside existing published entries in a timeline view. Users see continuity and can check for overlap with previous entries.
+
+**Rejected:** Preview showing only the draft in isolation.
 
 ---
 

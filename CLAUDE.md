@@ -1,10 +1,5 @@
 # Autolog - AI Changelog Generator
 
-## Project Context
-Take-home project for Greptile (Series A startup, <20 employees). They value speed, product intuition, and attention to detail.
-
-**Deadline:** January 3rd, 2025
-
 ## Documentation Rule
 **Every technical and product decision must be documented in README.md with reasoning.**
 
@@ -13,9 +8,9 @@ When a decision is made during development, immediately add it to the README und
 - Why (trade-offs considered)
 - Alternatives rejected
 
-This is a Greptile evaluation criterion: "feel free to share why you made the technical and product decisions that you made."
+This is evaluation criterion: "feel free to share why you made the technical and product decisions that you made."
 
-## Evaluation Criteria (from Greptile)
+## Evaluation Criteria
 - Does it work?
 - Does the backend logic make sense?
 - Is there evidence of user-centered product design choices?

@@ -73,7 +73,7 @@ export function ClarifyingQuestions({
   }
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+    <div className="w-full bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900/50">
         <div className="flex items-center gap-2">

@@ -235,19 +235,28 @@ export async function generateClarifyingQuestions(
 
   const summary = buildCompactSummary(commits);
 
-  const prompt = `Analyze these git commits and generate 2-4 clarifying questions to help write a better changelog.
+  const prompt = `Analyze these git commits and generate 2-4 clarifying questions to help write a better changelog for END USERS.
 
-Your questions should be SPECIFIC to what you observe. Good questions help determine:
-- Which feature areas to prioritize or highlight
-- Whether to detail each change or summarize groups
-- Level of detail for different types of changes
-- What the target audience cares about
+IMPORTANT: This changelog is for USERS, not developers. Completely IGNORE these when deciding what to ask about:
+- Database migrations, schema changes
+- Logging, debugging, error handling internals
+- Config files, environment variables
+- Refactoring, code cleanup, tests
+- API endpoints, webhooks, rate limiting
+- Any infrastructure/developer-only changes
+
+Focus ONLY on user-facing features. Good questions help determine:
+- Which user-facing features to prioritize or highlight
+- How to describe the BENEFITS to users (not just what changed, but why it matters)
+- Whether to detail each feature or summarize groups
+- What the target audience cares about (e.g., power users vs casual users)
 
 Rules:
-- Ask questions SPECIFIC to the actual commits (reference specific features/areas you see)
-- Each question should have 3-4 concrete options PLUS always include a final option: "Do not include this information" (for users who want to skip this category entirely)
-- If you see many commits in one area, ask whether to detail or summarize
-- Questions should help prioritize when there are many changes
+- ONLY ask about things that affect what users can SEE or DO
+- Ask questions SPECIFIC to actual user-facing features (reference specific features you see)
+- Include questions about HOW to frame benefits (e.g., "focus on time saved" vs "focus on new capabilities")
+- Each question should have 3-4 concrete options PLUS always include a final option: "Do not include this information"
+- If you see many commits in one feature area, ask whether to detail or summarize
 
 ${summary}
 
@@ -292,8 +301,8 @@ function buildChunkPrompt(
 
   let prefs = "";
   if (clarifyingAnswers && Object.keys(clarifyingAnswers).length > 0) {
-    prefs = "\nUser preferences:\n" + Object.entries(clarifyingAnswers)
-      .map(([q, a]) => `- ${q}: ${a}`)
+    prefs = "\nUser preferences:\n" + Object.values(clarifyingAnswers)
+      .map(a => `- ${a}`)
       .join("\n") + "\n";
   }
 
@@ -303,23 +312,27 @@ function buildChunkPrompt(
 
 CRITICAL RULES:
 1. Write for someone who USES the product, not someone who builds it
-2. Translate technical changes into USER BENEFITS
-3. SKIP entirely: logging, debugging, error handling, performance internals, refactoring, code cleanup, developer tools
-4. NEVER mention: file names, component names, endpoints, APIs, props, Redis, Celery, webhooks, rate limiting, databases, database migrations, schema changes, configs
+2. Translate technical changes into USER BENEFITS - explain WHY each change matters to users
+3. Be SPECIFIC and DETAILED - don't just say "improved X", explain what's better and how it helps
+4. SKIP entirely: logging, debugging, error handling, performance internals, refactoring, code cleanup, developer tools
+5. NEVER mention: file names, component names, endpoints, APIs, props, Redis, Celery, webhooks, rate limiting, databases, database migrations, schema changes, configs
 
 TRANSLATION EXAMPLES:
 - BAD: "Added LANGCHAIN_TRACING_V2 for debugging" → SKIP (internal only)
-- BAD: "Reduced web search timeout to 20 seconds" → GOOD: "Web search results now appear faster"
 - BAD: "Added hideButtons prop to MinimizedSessionCard" → SKIP (internal only)
-- BAD: "Implemented rate limiting for Garmin API" → GOOD: "Improved reliability of Garmin sync"
-- BAD: "Added /memories endpoint" → GOOD: "You can now view and manage your saved memories"
 - BAD: "Enhanced Redis client management" → SKIP (internal only)
-- BAD: "Improved error handling" → Only include if it means something to users, like "Better error messages when sync fails"
+- BAD: "Implemented rate limiting for Garmin API" → SKIP (internal only, unless it fixes a user-visible problem)
+- TOO VAGUE: "Improved reliability of Garmin sync" → BETTER: "Garmin sync now handles connection drops gracefully - your workouts won't be lost if your connection is interrupted"
+- TOO VAGUE: "Web search results now appear faster" → BETTER: "Web search results now appear in under 2 seconds, down from 10+ seconds"
+- TOO VAGUE: "You can now view your saved memories" → BETTER: "New Memories page lets you browse, search, and delete saved memories. Access it from the sidebar."
+- BAD: "Improved error handling" → Only include if it means something to users, like "Clearer error messages now tell you exactly what went wrong and how to fix it"
 
 FORMAT:
 - Use ## headers for feature groups (group by what users care about)
 - Use bullet points for individual changes
 - Be specific about what users can now DO, not how it was implemented
+- Output ONLY the changelog content - NO introduction, NO preamble, NO "Here's..." or "Based on..."
+- Start DIRECTLY with the first ## header
 ${context}${prefs}
 Commits:
 ${commitData}
@@ -336,8 +349,8 @@ function buildMergePrompt(
 ): string {
   let prefs = "";
   if (clarifyingAnswers && Object.keys(clarifyingAnswers).length > 0) {
-    prefs = "\nUser preferences:\n" + Object.entries(clarifyingAnswers)
-      .map(([q, a]) => `- ${q}: ${a}`)
+    prefs = "\nUser preferences:\n" + Object.values(clarifyingAnswers)
+      .map(a => `- ${a}`)
       .join("\n") + "\n";
   }
 
@@ -350,9 +363,12 @@ Your job:
 2. REMOVE duplicates
 3. REMOVE any developer-focused items that slipped through (logging, debugging, error handling internals, API endpoints, config changes, refactoring)
 4. KEEP only changes that affect what users can SEE or DO
-5. Organize with most impactful user-facing changes first
-6. Use ## headers and bullet points
-7. Be comprehensive but focused on user value
+5. Make each item SPECIFIC and DETAILED - explain the benefit to users, not just what changed
+6. Avoid vague phrases like "improved X" or "better Y" - be concrete about what's better and why it matters
+7. Organize with most impactful user-facing changes first
+8. Use ## headers and bullet points
+9. Output ONLY the changelog content - NO introduction, NO preamble, NO "Here's..." or "Based on..."
+10. Start DIRECTLY with the first ## header
 ${context}${prefs}
 Partials:
 

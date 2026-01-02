@@ -40,13 +40,24 @@ export async function POST(request: Request) {
   let effectiveSince = since;
 
   if (sinceLast) {
+    // First find the repo
+    const { data: repoData } = await supabase
+      .from("repos")
+      .select("id")
+      .eq("owner", owner)
+      .eq("name", repo)
+      .eq("user_id", session.user.id)
+      .single();
+
+    if (!repoData) {
+      return Response.json({ error: "No previous changelog for this project" }, { status: 400 });
+    }
+
     // Look up the most recent changelog for this repo
     const { data: lastEntry } = await supabase
       .from("changelog_entries")
       .select("created_at")
-      .eq("owner", owner)
-      .eq("repo_name", repo)
-      .eq("user_id", session.user.id)
+      .eq("repo_id", repoData.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
