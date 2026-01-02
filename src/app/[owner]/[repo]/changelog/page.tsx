@@ -47,7 +47,7 @@ export default async function ChangelogPage({ params }: Props) {
       {/* Header */}
       <div className="max-w-7xl mx-auto pt-16 px-4 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          {owner}/{repo}
+          {repo}
         </h1>
         <p className="text-neutral-400">Changelog</p>
       </div>

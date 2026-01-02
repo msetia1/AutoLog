@@ -16,21 +16,38 @@ export function ClarifyingQuestions({
 }: ClarifyingQuestionsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
 
   const currentQuestion = questions[currentIndex];
   const isLastQuestion = currentIndex === questions.length - 1;
 
-  const handleSelectOption = (label: string) => {
-    setSelectedOption(label);
+  const handleToggleOption = (label: string) => {
+    setSelectedOptions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(label)) {
+        newSet.delete(label);
+      } else {
+        newSet.add(label);
+      }
+      return newSet;
+    });
   };
 
   const handleNext = () => {
-    if (!selectedOption || !currentQuestion) return;
+    if (selectedOptions.size === 0 || !currentQuestion) return;
+
+    // Build answer string from selected options
+    const selectedTexts = Array.from(selectedOptions)
+      .map(label => {
+        const opt = currentQuestion.options.find(o => o.label === label);
+        return opt?.text;
+      })
+      .filter(Boolean)
+      .join("; ");
 
     const newAnswers = {
       ...answers,
-      [currentQuestion.id]: `${selectedOption}: ${currentQuestion.options.find(o => o.label === selectedOption)?.text}`,
+      [currentQuestion.id]: selectedTexts,
     };
     setAnswers(newAnswers);
 
@@ -38,7 +55,7 @@ export function ClarifyingQuestions({
       onComplete(newAnswers);
     } else {
       setCurrentIndex(currentIndex + 1);
-      setSelectedOption(null);
+      setSelectedOptions(new Set());
     }
   };
 
@@ -47,7 +64,7 @@ export function ClarifyingQuestions({
       onComplete(answers);
     } else {
       setCurrentIndex(currentIndex + 1);
-      setSelectedOption(null);
+      setSelectedOptions(new Set());
     }
   };
 
@@ -86,29 +103,32 @@ export function ClarifyingQuestions({
           {currentQuestion.question}
         </p>
 
-        {/* Options */}
+        {/* Options - multi-select */}
+        <p className="text-xs text-neutral-500 mb-3">Select all that apply</p>
         <div className="space-y-2">
           {currentQuestion.options.map((option) => (
             <button
               key={option.label}
-              onClick={() => handleSelectOption(option.label)}
+              onClick={() => handleToggleOption(option.label)}
               className={`w-full text-left p-3 rounded-lg border transition-all ${
-                selectedOption === option.label
+                selectedOptions.has(option.label)
                   ? "border-blue-500 bg-blue-500/10"
                   : "border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800/50"
               }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <span
-                  className={`flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-medium ${
-                    selectedOption === option.label
-                      ? "bg-blue-500 text-white"
-                      : "bg-neutral-800 text-neutral-400"
+                  className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    selectedOptions.has(option.label)
+                      ? "bg-blue-500 border-blue-500 text-white"
+                      : "border-neutral-600 text-transparent"
                   }`}
                 >
-                  {option.label}
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
                 </span>
-                <div>
+                <div className="flex-1">
                   <span className="text-neutral-200 text-sm">{option.text}</span>
                   {option.description && (
                     <p className="text-neutral-500 text-xs mt-0.5">
@@ -139,7 +159,7 @@ export function ClarifyingQuestions({
           </button>
           <button
             onClick={handleNext}
-            disabled={!selectedOption}
+            disabled={selectedOptions.size === 0}
             className="px-4 py-1.5 text-sm font-medium bg-white text-black rounded-lg hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLastQuestion ? "Generate" : "Next"}
