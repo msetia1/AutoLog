@@ -66,7 +66,7 @@ OPENROUTER_API_KEY=
 
 **Solution:** Layered approach:
 1. **Range selector** — Users choose "Since last entry", "Last 7/30 days" or "Last 25/50 commits"
-2. **Commit cap** — Hard limit of 50 commits regardless of selection
+2. **Chunking** — Process in batches of 12 commits, merge partial changelogs (no hard cap on total commits)
 3. **Diff truncation** — Each file's patch capped at 500 characters
 
 **Why both time and commit options?** Time-based works for active repos ("what changed this week"), but fails for dormant repos. Commit-based works universally.
@@ -81,7 +81,7 @@ OPENROUTER_API_KEY=
 - Truncated diffs (500 chars) still capture the "shape" of changes
 - Prompt instructs LLM to infer features from file paths and diffs
 
-**Rejected:** Including diffs for all commits (wastes tokens), or never including diffs (loses context for bad messages).
+**Rejected:** Including diffs for all commits (wastes tokens), or never including diffs (not enough context for bad commit messages).
 
 ### Changelog Grouping Strategy
 
@@ -90,7 +90,7 @@ OPENROUTER_API_KEY=
 
 **Chosen:** Group by product feature (e.g., "Calendar improvements", "Search functionality")
 - Can be inferred from file paths even with bad commit messages
-- More useful for end-users reading the changelog
+- More useful for end-users reading the changelog and how it actually affects them and their usage of the product
 
 ### File Filtering
 
@@ -107,8 +107,10 @@ For large commit ranges, process in batches of 12 and merge partial changelogs i
 ### Two-Phase Generation Flow
 
 Before generating, the AI asks 2-4 targeted questions about user preferences (detail level, which areas to highlight, audience). Users can skip individual questions or all of them. Answers become context for better output.
+\n
+This allows the user to have the changelog to be more tailored to what it focuses on
 
-**Rejected:** One-click generation with no user input.
+**Rejected:** One-click generation with no user input. One-size fits all isn't the best.
 
 ### "Since Last Entry" Time Range
 

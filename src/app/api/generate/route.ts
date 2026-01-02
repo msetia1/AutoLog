@@ -4,7 +4,6 @@ import { createServerClient } from "@/lib/supabase/server";
 import { fetchCommitsWithDiffs } from "@/lib/github";
 import { generateChangelog } from "@/lib/openrouter";
 
-const MAX_COMMITS = 50; // Safety cap
 
 export async function POST(request: Request) {
   const { owner, repo, since, sinceLast, limit, additionalContext, clarifyingAnswers } = await request.json();
@@ -83,12 +82,10 @@ export async function POST(request: Request) {
       return Response.json({ error: errorMsg }, { status: 400 });
     }
 
-    // Apply limit (user-selected or safety cap)
-    const effectiveLimit = Math.min(limit || MAX_COMMITS, MAX_COMMITS);
-    const totalCommits = commits.length;
-    if (commits.length > effectiveLimit) {
-      commits = commits.slice(0, effectiveLimit);
-      console.log(`Capped to ${effectiveLimit} commits (from ${totalCommits})`);
+    // Apply limit only if user selected a commit-based range
+    if (limit && commits.length > limit) {
+      console.log(`Limiting to ${limit} commits (from ${commits.length})`);
+      commits = commits.slice(0, limit);
     }
 
     // Generate changelog with streaming

@@ -4,8 +4,6 @@ import { createServerClient } from "@/lib/supabase/server";
 import { fetchCommitsWithDiffs } from "@/lib/github";
 import { generateClarifyingQuestions } from "@/lib/openrouter";
 
-const MAX_COMMITS = 50;
-
 export async function POST(request: Request) {
   const { owner, repo, since, sinceLast, limit, additionalContext } = await request.json();
 
@@ -80,10 +78,9 @@ export async function POST(request: Request) {
       return Response.json({ error: errorMsg }, { status: 400 });
     }
 
-    // Apply limit
-    const effectiveLimit = Math.min(limit || MAX_COMMITS, MAX_COMMITS);
-    if (commits.length > effectiveLimit) {
-      commits = commits.slice(0, effectiveLimit);
+    // Apply limit only if user selected a commit-based range
+    if (limit && commits.length > limit) {
+      commits = commits.slice(0, limit);
     }
 
     // Generate clarifying questions

@@ -257,6 +257,7 @@ Rules:
 - Include questions about HOW to frame benefits (e.g., "focus on time saved" vs "focus on new capabilities")
 - Each question should have 3-4 concrete options PLUS always include a final option: "Do not include this information"
 - If you see many commits in one feature area, ask whether to detail or summarize
+- Do NOT use markdown formatting (no *asterisks*, **bold**, etc.) — use plain text only
 
 ${summary}
 
