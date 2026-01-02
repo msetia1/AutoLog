@@ -112,7 +112,7 @@ export function ClarifyingQuestions({
               onClick={() => handleToggleOption(option.label)}
               className={`w-full text-left p-3 rounded-lg border transition-all ${
                 selectedOptions.has(option.label)
-                  ? "border-blue-500 bg-blue-500/10"
+                  ? "border-[#4AF262]/50 bg-[#4AF262]/10"
                   : "border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800/50"
               }`}
             >
@@ -120,7 +120,7 @@ export function ClarifyingQuestions({
                 <span
                   className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
                     selectedOptions.has(option.label)
-                      ? "bg-blue-500 border-blue-500 text-white"
+                      ? "bg-[#4AF262] border-[#4AF262] text-black"
                       : "border-neutral-600 text-transparent"
                   }`}
                 >
@@ -160,7 +160,7 @@ export function ClarifyingQuestions({
           <button
             onClick={handleNext}
             disabled={selectedOptions.size === 0}
-            className="px-4 py-1.5 text-sm font-medium bg-white text-black rounded-lg hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-1.5 text-sm font-medium bg-[#4AF262]/15 border border-[#4AF262]/50 text-[#4AF262] rounded-lg hover:bg-[#4AF262]/25 hover:border-[#4AF262]/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {isLastQuestion ? "Generate" : "Next"}
           </button>

@@ -12,6 +12,32 @@ import type { ClarifyingQuestion } from "@/lib/openrouter";
 
 type GenerationPhase = "idle" | "analyzing" | "questions" | "generating";
 
+// Fun status messages for generation phases
+const STATUS_MESSAGES = {
+  analyzing: [
+    "Analyzing commit history...",
+    "Reading through changes...",
+    "Examining your commits...",
+  ],
+  processing: [
+    "Understanding feature changes...",
+    "Reviewing code modifications...",
+    "Processing recent updates...",
+    "Examining the diffs...",
+    "Analyzing feature impact...",
+  ],
+  merging: [
+    "Organizing the changelog...",
+    "Combining related changes...",
+    "Polishing the final result...",
+  ],
+};
+
+function getRandomStatus(phase: keyof typeof STATUS_MESSAGES): string {
+  const messages = STATUS_MESSAGES[phase];
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 interface ChangelogEntry {
   id: string;
   repo: string;
@@ -34,7 +60,8 @@ export default function Dashboard() {
   const [loadingCommits, setLoadingCommits] = useState(false);
   const [changelog, setChangelog] = useState<string>("");
   const [generateError, setGenerateError] = useState<string>("");
-  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [editorMode, setEditorMode] = useState<"edit" | "preview">("preview");
+  const [generationStatus, setGenerationStatus] = useState<string>("");
   const [rangeType, setRangeType] = useState<string>("commits-25");
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string>("");
@@ -48,6 +75,10 @@ export default function Dashboard() {
 
   // Recent changelogs
   const [recentEntries, setRecentEntries] = useState<ChangelogEntry[]>([]);
+
+  // Typewriter effect for title
+  const [titleText, setTitleText] = useState("");
+  const [titleComplete, setTitleComplete] = useState(false);
 
   // Range options
   const rangeOptions = [
@@ -64,6 +95,62 @@ export default function Dashboard() {
       router.push("/");
     }
   }, [session, isPending, router]);
+
+  // Typewriter animation
+  useEffect(() => {
+    const fullWord = "auto changelog";
+    const deleteUntil = 4; // Keep "auto"
+    const finalWord = "autolog";
+    const typeSpeed = 80;
+    const deleteSpeed = 40;
+    const pauseBeforeDelete = 1500;
+    const pauseBeforeType = 300;
+
+    let timeout: NodeJS.Timeout;
+    let currentIndex = 0;
+    let phase: "typing" | "pausing" | "deleting" | "typing-final" | "done" = "typing";
+
+    const animate = () => {
+      if (phase === "typing") {
+        if (currentIndex < fullWord.length) {
+          setTitleText(fullWord.slice(0, currentIndex + 1));
+          currentIndex++;
+          timeout = setTimeout(animate, typeSpeed);
+        } else {
+          phase = "pausing";
+          timeout = setTimeout(animate, pauseBeforeDelete);
+        }
+      } else if (phase === "pausing") {
+        phase = "deleting";
+        currentIndex = fullWord.length;
+        animate();
+      } else if (phase === "deleting") {
+        if (currentIndex > deleteUntil) {
+          currentIndex--;
+          setTitleText(fullWord.slice(0, currentIndex));
+          timeout = setTimeout(animate, deleteSpeed);
+        } else {
+          phase = "typing-final";
+          currentIndex = deleteUntil;
+          timeout = setTimeout(animate, pauseBeforeType);
+        }
+      } else if (phase === "typing-final") {
+        if (currentIndex < finalWord.length) {
+          setTitleText(finalWord.slice(0, currentIndex + 1));
+          currentIndex++;
+          timeout = setTimeout(animate, typeSpeed);
+        } else {
+          phase = "done";
+          // Blink 3 times (3 seconds) before hiding cursor
+          timeout = setTimeout(() => setTitleComplete(true), 3000);
+        }
+      }
+    };
+
+    timeout = setTimeout(animate, 300);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   // Fetch repos and recent entries on mount
   useEffect(() => {
@@ -199,6 +286,7 @@ export default function Dashboard() {
   // Phase 3: Generate final changelog with streaming
   async function generateFinalChangelog(answers: Record<string, string>) {
     setGenerationPhase("generating");
+    setGenerationStatus(getRandomStatus("analyzing"));
 
     const params = {
       ...buildParams(),
@@ -220,30 +308,53 @@ export default function Dashboard() {
           setGenerateError(errorData.error || "Failed to generate changelog");
         }
         setGenerationPhase("idle");
+        setGenerationStatus("");
         return;
       }
 
+      // Collect full response while updating status based on progress markers
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
 
       if (!reader) throw new Error("No response body");
+
+      let fullContent = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        setChangelog((prev) => prev + chunk);
+        fullContent += chunk;
 
-        if (changelogRef.current) {
-          changelogRef.current.scrollTop = changelogRef.current.scrollHeight;
+        // Update status based on progress markers
+        if (chunk.includes("*Processing batch")) {
+          setGenerationStatus(getRandomStatus("processing"));
+        }
+        if (chunk.includes("*Merging")) {
+          setGenerationStatus(getRandomStatus("merging"));
         }
       }
-      // Clean up any markdown code block wrappers
-      setChangelog((prev) => stripMarkdownCodeBlock(prev));
+
+      // Strip all progress markers from final content
+      let cleanContent = fullContent
+        .replace(/\*Processing batch \d+\/\d+\.\.\.\*\n?/g, "")
+        .replace(/ Done\.\n/g, "")
+        .replace(/\*Merging results\.\.\.\*\n?/g, "")
+        .replace(/\n?---\n\n?/g, "")
+        .replace(/<!-- progress -->/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      // Strip markdown code block wrappers
+      cleanContent = stripMarkdownCodeBlock(cleanContent);
+
+      setChangelog(cleanContent);
+      setGenerationStatus("");
     } catch (err) {
       console.error("Failed to generate changelog:", err);
       setGenerateError("Failed to generate changelog");
+      setGenerationStatus("");
     } finally {
       setGenerationPhase("idle");
     }
@@ -340,24 +451,12 @@ export default function Dashboard() {
         {/* Header */}
         <header className="flex justify-between items-center py-6">
           <div className="text-xl text-[#4AF262] flex items-center" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
-            {"autolog".split("").map((char, index) => (
-              <motion.span
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.1, delay: index * 0.08 }}
-              >
-                {char}
-              </motion.span>
-            ))}
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 0.8, repeat: 3, delay: 0.7 }}
-              className="ml-0.5 text-[#4AF262]"
-            >
-              _
-            </motion.span>
+            {titleText}
+            {!titleComplete && (
+              <span
+                className="inline-block w-[2px] h-[1.1em] bg-[#4AF262] ml-0.5 animate-[blink_1s_step-end_infinite]"
+              />
+            )}
           </div>
           <div className="flex items-center gap-4" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}>
             <span className="text-sm text-neutral-500">{session.user.name}</span>
@@ -551,18 +650,21 @@ export default function Dashboard() {
                     {generateError}
                   </div>
                 ) : generationPhase === "generating" ? (
-                  <pre className="whitespace-pre-wrap font-sans text-sm p-4 max-h-96 overflow-y-auto text-neutral-300">
-                    {changelog || "Generating..."}
-                  </pre>
+                  <div className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin w-4 h-4 border-2 border-neutral-700 border-t-[#4AF262] rounded-full" />
+                      <span className="text-neutral-400 text-sm">{generationStatus || "Starting generation..."}</span>
+                    </div>
+                  </div>
                 ) : editorMode === "edit" ? (
                   <textarea
                     value={changelog}
                     onChange={(e) => setChangelog(e.target.value)}
-                    className="w-full h-96 p-4 text-sm font-mono resize-none focus:outline-none bg-transparent text-neutral-200"
+                    className="w-full min-h-[400px] p-4 text-sm font-mono resize-y focus:outline-none bg-transparent text-neutral-200"
                     placeholder="Your changelog will appear here..."
                   />
                 ) : (
-                  <div className="prose prose-sm prose-invert max-w-none p-4 max-h-96 overflow-y-auto">
+                  <div className="prose prose-sm prose-invert max-w-none p-4">
                     <ReactMarkdown>{changelog}</ReactMarkdown>
                   </div>
                 )}
