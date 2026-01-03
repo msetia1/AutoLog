@@ -27,6 +27,9 @@ OPENROUTER_API_KEY=
 
 ---
 
+# Demo
+[Demo](https://www.loom.com/share/47963dd1f9834878b2ab9731b7b612d9)
+
 ## Technical Decisions
 
 ### Stack
