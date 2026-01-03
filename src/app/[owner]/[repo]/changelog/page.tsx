@@ -67,8 +67,12 @@ export default async function ChangelogPage({ params }: Props) {
       <footer className="max-w-7xl mx-auto px-4 md:px-8 lg:px-10 py-12 border-t border-neutral-800">
         <p className="text-sm text-neutral-500 text-center">
           Generated with{" "}
-          <a href="/" className="text-neutral-400 hover:text-white transition-colors">
-            AutoLog
+          <a
+            href="/"
+            className="text-neutral-400 hover:text-white transition-colors"
+            style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}
+          >
+            autolog
           </a>
         </p>
       </footer>

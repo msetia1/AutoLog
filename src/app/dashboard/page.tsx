@@ -9,6 +9,9 @@ import ReactMarkdown from "react-markdown";
 import { ClarifyingQuestions } from "@/components/clarifying-questions";
 import { ChangelogPreviewModal } from "@/components/changelog-preview-modal";
 import { LoaderFive } from "@/components/ui/loader";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import type { Repo, Commit } from "@/lib/github";
 import type { ClarifyingQuestion } from "@/lib/openrouter";
 
@@ -68,6 +71,8 @@ export default function Dashboard() {
   const [repoPublishedEntries, setRepoPublishedEntries] = useState<ChangelogEntry[]>([]);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [rangeType, setRangeType] = useState<string>("commits-25");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string>("");
   const changelogRef = useRef<HTMLDivElement>(null);
@@ -92,6 +97,7 @@ export default function Dashboard() {
     { value: "days-30", label: "Last 30 days" },
     { value: "commits-25", label: "25 commits" },
     { value: "commits-50", label: "50 commits" },
+    { value: "custom", label: "Custom date range" },
   ];
 
   // Redirect if not authenticated
@@ -214,7 +220,7 @@ export default function Dashboard() {
   function buildParams() {
     const [owner, repo] = selectedRepo.split("/");
     const [type, value] = rangeType.split("-");
-    const params: { owner: string; repo: string; since?: string; limit?: number; sinceLast?: boolean; additionalContext?: string } = {
+    const params: { owner: string; repo: string; since?: string; until?: string; limit?: number; sinceLast?: boolean; additionalContext?: string } = {
       owner,
       repo,
       additionalContext: additionalContext || undefined,
@@ -228,6 +234,14 @@ export default function Dashboard() {
       params.since = date.toISOString();
     } else if (type === "commits") {
       params.limit = parseInt(value);
+    } else if (type === "custom" && customDateRange?.from) {
+      params.since = customDateRange.from.toISOString();
+      if (customDateRange.to) {
+        // Set to end of day for the "to" date
+        const endOfDay = new Date(customDateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        params.until = endOfDay.toISOString();
+      }
     }
 
     return params;
@@ -528,20 +542,65 @@ export default function Dashboard() {
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {rangeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setRangeType(option.value)}
-                      disabled={generationPhase !== "idle"}
-                      className={`flex-1 whitespace-nowrap px-4 py-2 text-sm rounded-lg border transition-all ${
-                        rangeType === option.value
-                          ? "bg-white/10 border-white/30 text-white font-medium"
-                          : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {option.label}
-                    </button>
+                    option.value === "custom" ? (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          if (rangeType === "custom") {
+                            setShowCalendar(!showCalendar);
+                          } else {
+                            setRangeType("custom");
+                            setShowCalendar(true);
+                          }
+                        }}
+                        disabled={generationPhase !== "idle"}
+                        className={`w-full whitespace-nowrap px-4 py-2 text-sm rounded-lg border transition-all flex items-center justify-center gap-2 ${
+                          rangeType === "custom"
+                            ? "bg-white/10 border-white/30 text-white font-medium"
+                            : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        {rangeType === "custom" && customDateRange?.from
+                          ? customDateRange.to
+                            ? `${customDateRange.from.toLocaleDateString()} - ${customDateRange.to.toLocaleDateString()}`
+                            : customDateRange.from.toLocaleDateString()
+                          : "Custom date range"}
+                      </button>
+                    ) : (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setRangeType(option.value);
+                          setShowCalendar(false);
+                        }}
+                        disabled={generationPhase !== "idle"}
+                        className={`flex-1 whitespace-nowrap px-4 py-2 text-sm rounded-lg border transition-all ${
+                          rangeType === option.value
+                            ? "bg-white/10 border-white/30 text-white font-medium"
+                            : "border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {option.label}
+                      </button>
+                    )
                   ))}
                 </div>
+
+                {/* Inline Calendar for Custom Range */}
+                {rangeType === "custom" && showCalendar && (
+                  <div className="mt-4 flex justify-center">
+                    <Calendar
+                      mode="range"
+                      defaultMonth={customDateRange?.from}
+                      selected={customDateRange}
+                      onSelect={setCustomDateRange}
+                      numberOfMonths={2}
+                      disabled={(date) => date > new Date()}
+                      className="rounded-lg border border-neutral-800 bg-neutral-900 p-3"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Context */}
@@ -561,7 +620,7 @@ export default function Dashboard() {
               {/* Generate Button */}
               <button
                 onClick={handleGenerate}
-                disabled={!selectedRepo || commits.length === 0 || generationPhase !== "idle"}
+                disabled={!selectedRepo || commits.length === 0 || generationPhase !== "idle" || (rangeType === "custom" && !customDateRange?.from)}
                 className="w-full py-4 text-sm font-semibold bg-white/10 border border-white/30 text-white rounded-xl hover:bg-white/15 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 {generationPhase === "analyzing" ? "Analyzing..." :

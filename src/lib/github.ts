@@ -78,12 +78,16 @@ export async function fetchCommitsWithDiffs(
   accessToken: string,
   owner: string,
   repo: string,
-  since?: string
+  since?: string,
+  until?: string
 ): Promise<Commit[]> {
   // Step 1: Get list of commits
   const params = new URLSearchParams({ per_page: "100" });
   if (since) {
     params.set("since", since);
+  }
+  if (until) {
+    params.set("until", until);
   }
 
   const listResponse = await fetch(

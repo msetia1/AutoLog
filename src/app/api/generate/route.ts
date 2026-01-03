@@ -6,7 +6,7 @@ import { generateChangelog } from "@/lib/openrouter";
 
 
 export async function POST(request: Request) {
-  const { owner, repo, since, sinceLast, limit, additionalContext, clarifyingAnswers } = await request.json();
+  const { owner, repo, since, until, sinceLast, limit, additionalContext, clarifyingAnswers } = await request.json();
 
   if (!owner || !repo) {
     return Response.json({ error: "Missing owner or repo" }, { status: 400 });
@@ -71,8 +71,8 @@ export async function POST(request: Request) {
 
   try {
     // Fetch commits with diffs
-    console.log("Fetching commits for", owner, repo, "since:", effectiveSince, "limit:", limit);
-    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, effectiveSince);
+    console.log("Fetching commits for", owner, repo, "since:", effectiveSince, "until:", until, "limit:", limit);
+    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, effectiveSince, until);
     console.log("Fetched", commits.length, "commits from GitHub");
 
     if (commits.length === 0) {

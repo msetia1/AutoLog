@@ -5,7 +5,7 @@ import { fetchCommitsWithDiffs } from "@/lib/github";
 import { generateClarifyingQuestions } from "@/lib/openrouter";
 
 export async function POST(request: Request) {
-  const { owner, repo, since, sinceLast, limit, additionalContext } = await request.json();
+  const { owner, repo, since, until, sinceLast, limit, additionalContext } = await request.json();
 
   if (!owner || !repo) {
     return Response.json({ error: "Missing owner or repo" }, { status: 400 });
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
   try {
     // Fetch commits with diffs
-    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, effectiveSince);
+    let commits = await fetchCommitsWithDiffs(account.accessToken, owner, repo, effectiveSince, until);
 
     if (commits.length === 0) {
       const errorMsg = sinceLast
