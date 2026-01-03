@@ -325,7 +325,7 @@ export default function Dashboard() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        setGenerateError(errorData.error || "Failed to generate changelog");
+        setGenerateError(errorData.error || "Failed to generate changelog entry");
         setGenerationPhase("idle");
         setGenerationStatus("");
         return;
@@ -371,8 +371,8 @@ export default function Dashboard() {
       setChangelog(cleanContent);
       setGenerationStatus("");
     } catch (err) {
-      console.error("Failed to generate changelog:", err);
-      setGenerateError("Failed to generate changelog");
+      console.error("Failed to generate changelog entry:", err);
+      setGenerateError("Failed to generate changelog entry");
       setGenerationStatus("");
     } finally {
       setGenerationPhase("idle");
@@ -514,7 +514,7 @@ export default function Dashboard() {
             <div className="bg-[#141414]/80 backdrop-blur-sm border border-neutral-800 rounded-2xl p-8 lg:row-span-1">
               {/* Title */}
               <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Generate Changelog</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Generate Changelog Entry</h1>
                 <p className="text-neutral-500">Select a repository and let AI summarize your recent commits</p>
               </div>
 
@@ -627,7 +627,7 @@ export default function Dashboard() {
                  generationPhase === "generating" ? "Generating..." :
                  generationPhase === "questions" ? "Answer Questions Below" :
                  loadingCommits ? "Loading commits..." :
-                 "Generate Changelog"}
+                 "Generate Changelog Entry"}
               </button>
             </div>
 
