@@ -65,7 +65,7 @@ OPENROUTER_API_KEY=
 **Problem:** Users connecting repos with many commits would exceed LLM context limits.
 
 **Solution:** Layered approach:
-1. **Range selector** — Users choose "Since last entry", "Last 7/30 days" or "Last 25/50 commits"
+1. **Range selector** — Users choose "Since last entry", "Last 7/30 days", "Last 25/50 commits", or even choose a custom date range
 2. **Chunking** — Process in batches of 12 commits, merge partial changelogs (no hard cap on total commits)
 3. **Diff truncation** — Each file's patch capped at 500 characters
 
@@ -107,10 +107,11 @@ For large commit ranges, process in batches of 12 and merge partial changelogs i
 ### Two-Phase Generation Flow
 
 Before generating, the AI asks 2-4 targeted questions about user preferences (detail level, which areas to highlight, audience). Users can skip individual questions or all of them. Answers become context for better output.
-\n
+<br />
+
 This allows the user to have the changelog to be more tailored to what it focuses on
 
-**Rejected:** One-click generation with no user input. One-size fits all isn't the best.
+**Rejected:** One-click generation with no user input. One-size fits all doesn't tailor to the style or the info the user wants
 
 ### "Since Last Entry" Time Range
 
@@ -130,4 +131,3 @@ Preview modal shows the draft changelog alongside existing published entries in 
 ## AI Tools Used
 
 - **Claude Code** — Development assistance
-- **OpenRouter (Gemini 2.0 Flash Lite)** — Changelog generation
