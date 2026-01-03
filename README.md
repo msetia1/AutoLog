@@ -43,6 +43,12 @@ OPENROUTER_API_KEY=
 - **Edit flow** — Textarea with markdown preview. Developer can edit AI output and preview what it would look like on their existing changelog before publishing.
 - **Styling** — Tailwind + shadcn/ui. Clean, minimal aesthetic.
 
+### Architecture
+
+- **GitHub Token Flow** — On OAuth login, Better Auth stores the GitHub access token in the `account` table. API routes retrieve this token per-request to make authenticated GitHub API calls (fetching repos, commits, diffs).
+- **API Authentication** — All protected routes verify the session via Better Auth before processing. Unauthenticated requests return 401.
+- **Streaming Responses** — OpenRouter returns Server-Sent Events (SSE). The `/api/generate` route transforms this into a plain text stream for the client, keeping the connection alive past Vercel's timeout.
+
 ---
 
 ## Changelog Generation Flow
@@ -131,3 +137,52 @@ Preview modal shows the draft changelog alongside existing published entries in 
 ## AI Tools Used
 
 - **Claude Code** — Development assistance
+
+---
+
+## Data Model
+
+### Tables
+
+**Better Auth (managed by library):**
+- `user` — User profile (id, name, email, image)
+- `account` — OAuth accounts, stores GitHub `accessToken` for API access
+- `session` — Active sessions
+- `verification` — Email verification tokens
+
+**Application:**
+- `repos` — Connected repositories per user
+  - `last_changelog_commit_sha` — Tracks the most recent commit included in a published changelog (enables "Since last entry" feature)
+  - Unique constraint on `(user_id, owner, name)`
+- `changelog_entries` — Published changelog entries
+  - `published` flag — Enables draft vs published state
+  - Indexed on `(repo_id, date DESC)` for efficient timeline queries
+
+### Schema
+
+```sql
+-- Better Auth tables (user, account, session, verification) omitted for brevity
+
+CREATE TABLE repos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    owner TEXT NOT NULL,
+    name TEXT NOT NULL,
+    last_changelog_commit_sha TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, owner, name)
+);
+
+CREATE TABLE changelog_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repo_id UUID NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    content TEXT NOT NULL,
+    published BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_repos_user ON repos(user_id);
+CREATE INDEX idx_changelog_entries_repo_date ON changelog_entries(repo_id, date DESC);
+```

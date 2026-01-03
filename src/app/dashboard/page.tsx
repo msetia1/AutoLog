@@ -722,6 +722,21 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+              {publishedUrl && (
+                <div className="mb-4 p-3 bg-white/10 border border-white/30 rounded-lg">
+                  <p className="text-sm text-white">
+                    Published successfully!{" "}
+                    <a
+                      href={publishedUrl}
+                      className="underline hover:text-neutral-300"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View changelog
+                    </a>
+                  </p>
+                </div>
+              )}
               <div
                 ref={changelogRef}
                 className="bg-[#0a0a0a] border border-neutral-800 rounded-xl overflow-hidden"
@@ -747,21 +762,6 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              {publishedUrl && (
-                <div className="mt-4 p-3 bg-white/10 border border-white/30 rounded-lg">
-                  <p className="text-sm text-white">
-                    Published successfully!{" "}
-                    <a
-                      href={publishedUrl}
-                      className="underline hover:text-neutral-300"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View changelog
-                    </a>
-                  </p>
-                </div>
-              )}
             </div>
           )}
           </div>
